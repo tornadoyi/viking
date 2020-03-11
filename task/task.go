@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 	. "viking/goplus/core"
 	"viking/goplus/runtime"
 )
@@ -81,7 +82,16 @@ func (h *Task) Wait(){
 	h.wg.Wait()
 }
 
-func (h *Task) WaitResult() interface{}{
-	h.Wait()
-	return h.result
+func (h *Task) WaitTimeout(timeout time.Duration) bool{
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		h.Wait()
+	}()
+	select {
+	case <-c:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
 }
