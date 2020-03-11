@@ -1,13 +1,14 @@
 package log
 
 import (
-	l4g "github.com/jeanphorn/log4go"
+	"runtime"
+	l4g "viking/log/log4go"
 	"sync"
 )
 
 var (
 	loggers = make(map[string]Logger)
-	defaultLogger Logger
+	defaultLogger = createDefaultLogger()
 	mutex sync.Mutex
 )
 
@@ -15,17 +16,32 @@ func GetLogger(name string) Logger{
 	defer mutex.Unlock()
 	mutex.Lock()
 	log, ok := loggers[name]
-	if !ok {
-		log = make(Logger)
-		loggers[name] = log
-	}
+	if !ok { return nil}
 	return log
 }
 
-func SetDefault(log Logger) {
+func SetDefaultLogger(log Logger) {
 	defaultLogger = log
 }
 
+
+func createDefaultLogger() Logger{
+	log := createLogger()
+	lw := l4g.NewConsoleLogWriter()
+	lw.SetFormat("[%D %T] [%L] %M")
+	log.AddFilter("stdout", l4g.DEBUG, lw)
+	return log
+}
+
+func createLogger() Logger{
+	log := make(Logger)
+
+	// destructor
+	runtime.SetFinalizer(&log, func (log *Logger){
+		log.Close()
+	})
+	return log
+}
 
 
 // export
