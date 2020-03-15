@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -23,18 +24,18 @@ var (
 )
 
 type PanicInfo struct {
-	error		interface{}
+	error		error
 	stack		runtime.Stack
 }
 
-func (h *PanicInfo) Error() interface{} { return h.error}
+func (h *PanicInfo) Error() error { return h.error}
 
 func (h *PanicInfo) Stack() runtime.Stack { return h.stack}
 
 func Catch(){
 	err := recover()
 	if err == nil { return }
-	info := &PanicInfo{err, runtime.Trace(4)}
+	info := &PanicInfo{errors.New(fmt.Sprintf("%v", err)), runtime.Trace(4)}
 	if catchErrCallback != nil { catchErrCallback(info) }
 }
 
@@ -42,7 +43,7 @@ func Catch(){
 func CatchCallback(cb func(*PanicInfo)) {
 	err := recover()
 	if err == nil { return }
-	info := &PanicInfo{err, runtime.Trace(4)}
+	info := &PanicInfo{errors.New(fmt.Sprintf("%v", err)), runtime.Trace(4)}
 	if cb != nil { cb(info) }
 	if catchErrCallback != nil { catchErrCallback(info) }
 }

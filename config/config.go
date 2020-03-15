@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sort"
 	"time"
+	"viking/log"
 	"viking/task"
 )
 
@@ -19,7 +20,7 @@ type Config struct {
 	name			string
 	executor		reflect.Value
 	arguments		[]reflect.Value
-	priority		time.Duration
+	priority		int
 	schedule		time.Duration
 	data			interface{}
 
@@ -27,13 +28,13 @@ type Config struct {
 
 func (h *Config) Name() string{ return h.name }
 
-func (h *Config) Priority() time.Duration{ return h.priority }
+func (h *Config) Priority() int { return h.priority }
 
 func (h *Config) Schedule() time.Duration{ return h.schedule }
 
-func (h *Config) Execute() interface{}{ return h.executor.Call(h.arguments) }
+func (h *Config) Execute() interface{}{ return h.executor.Call(h.arguments)[0].Interface() }
 
-func (h* Config) SetPriority(priority time.Duration){ h.priority = priority }
+func (h* Config) SetPriority(priority int){ h.priority = priority }
 
 func (h* Config) SetSchedule(delay time.Duration){
 	if _, ok := timers[delay]; ok { return }
@@ -49,7 +50,7 @@ type UpdateTimer struct {
 
 
 
-func AddConfig(name string, f interface{}, args... interface{}) *Config{
+func Add(name string, f interface{}, args... interface{}) *Config{
 	if _, ok := configs[name]; ok { panic(errors.New(fmt.Sprintf("Repeated config %k", name))) }
 	vargs := make([]reflect.Value, len(args))
 	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
@@ -63,6 +64,13 @@ func AddConfig(name string, f interface{}, args... interface{}) *Config{
 	}
 	configs[name] = config
 	return config
+}
+
+
+func GetContent(name string) interface{}{
+	c, ok := configs[name]
+	if !ok { panic(errors.New(fmt.Sprintf("Config %v is non-existent", name))) }
+	return c.data
 }
 
 
@@ -96,8 +104,8 @@ func Start(){
 
 
 func updateConfigs(configs []*Config){
-	priors := make([]time.Duration, 0, len(configs))
-	priorConfigs := make(map[time.Duration][]*Config)
+	priors := make([]int, 0, len(configs))
+	priorConfigs := make(map[int][]*Config)
 
 	for _, c := range configs{
 		if _, ok := priorConfigs[c.priority]; !ok {
@@ -109,6 +117,8 @@ func updateConfigs(configs []*Config){
 	sort.Slice(priors, func(i, j int) bool {
 		return priors[i] < priors[j]
 	})
+
+	errs := make([]error, 0)
 
 	for _, p := range priors {
 		list, _ := priorConfigs[p]
@@ -123,6 +133,12 @@ func updateConfigs(configs []*Config){
 		}
 		ts.Start()
 		ts.Wait()
+
+		errs = append(errs, ts.Errors()...)
+	}
+
+	for _, e := range errs {
+		log.Error(e)
 	}
 
 }

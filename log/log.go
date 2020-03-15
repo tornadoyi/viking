@@ -1,9 +1,11 @@
 package log
 
 import (
+	"errors"
+	"fmt"
 	"runtime"
-	l4g "viking/log/log4go"
 	"sync"
+	l4g "viking/log/log4go"
 )
 
 var (
@@ -11,6 +13,7 @@ var (
 	defaultLogger = createDefaultLogger()
 	mutex sync.Mutex
 )
+
 
 func GetLogger(name string) Logger{
 	defer mutex.Unlock()
@@ -26,15 +29,20 @@ func SetDefaultLogger(log Logger) {
 
 
 func createDefaultLogger() Logger{
-	log := createLogger()
+	log := CreateLogger("__default__")
 	lw := l4g.NewConsoleLogWriter()
 	lw.SetFormat("[%D %T] [%L] %M")
-	log.AddFilter("stdout", l4g.DEBUG, lw)
+	log.AddFilter("stdout", l4g.FINEST, lw)
 	return log
 }
 
-func createLogger() Logger{
+func CreateLogger(name string) Logger{
+	defer mutex.Unlock()
+	mutex.Lock()
+
 	log := make(Logger)
+	if _, ok := loggers[name]; ok { panic(errors.New(fmt.Sprintf("Repeated logger name %v", name))) }
+	loggers[name] = log
 
 	// destructor
 	runtime.SetFinalizer(&log, func (log *Logger){
@@ -62,3 +70,5 @@ func Warn(arg0 interface{}, args ...interface{}) { defaultLogger.Warn(arg0, args
 func Error(arg0 interface{}, args ...interface{}) { defaultLogger.Error(arg0, args...) }
 
 func Critical(arg0 interface{}, args ...interface{}) { defaultLogger.Critical(arg0, args...) }
+
+func ParseYamlConfig(config string) (*l4g.YamlLogConfig, error) { return l4g.ParseYamlConfig(config) }

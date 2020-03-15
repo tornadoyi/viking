@@ -21,7 +21,9 @@ func IsDir(path string) bool {
 }
 
 func IsFile(path string) bool {
-	return !IsDir(path)
+	s, err := os.Stat(path)
+	if err != nil { return false }
+	return !s.IsDir()
 }
 
 func ExpandUser(path string) string{

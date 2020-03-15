@@ -4,17 +4,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type _ConsoleConfig struct {
+type YamlConsoleConfig struct {
 	Enable_  bool   `yaml:"enable"`
 	Level_   string `yaml:"level"`
 	Pattern_ string `yaml:"pattern"`
 }
 
-func (h* _ConsoleConfig) Enable() bool { return h.Enable_ }
-func (h* _ConsoleConfig) Level() string { return h.Level_ }
-func (h* _ConsoleConfig) Pattern() string { return h.Pattern_ }
+func (h* YamlConsoleConfig) Enable() bool { return h.Enable_ }
+func (h* YamlConsoleConfig) Level() string { return h.Level_ }
+func (h* YamlConsoleConfig) Pattern() string { return h.Pattern_ }
 
-type _FileConfig struct {
+type YamlFileConfig struct {
 	Enable_   bool   `yaml:"enable"`
 	Category_ string `yaml:"category"`
 	Level_    string `yaml:"level"`
@@ -29,18 +29,18 @@ type _FileConfig struct {
 	Sanitize_ bool   `yaml:"sanitize"` //Sanitize newlines to prevent log injection
 }
 
-func (h* _FileConfig) Enable() bool { return h.Enable_ }
-func (h* _FileConfig) Category() string { return h.Category_ }
-func (h* _FileConfig) Level() string { return h.Level_ }
-func (h* _FileConfig) Filename() string { return h.Filename_ }
-func (h* _FileConfig) Pattern() string { return h.Pattern_ }
-func (h* _FileConfig) Rotate() bool { return h.Rotate_ }
-func (h* _FileConfig) Maxsize() string { return h.Maxsize_ }
-func (h* _FileConfig) Maxlines() string { return h.Maxlines_ }
-func (h* _FileConfig) Daily() bool { return h.Daily_ }
-func (h* _FileConfig) Sanitize() bool { return h.Sanitize_ }
+func (h* YamlFileConfig) Enable() bool { return h.Enable_ }
+func (h* YamlFileConfig) Category() string { return h.Category_ }
+func (h* YamlFileConfig) Level() string { return h.Level_ }
+func (h* YamlFileConfig) Filename() string { return h.Filename_ }
+func (h* YamlFileConfig) Pattern() string { return h.Pattern_ }
+func (h* YamlFileConfig) Rotate() bool { return h.Rotate_ }
+func (h* YamlFileConfig) Maxsize() string { return h.Maxsize_ }
+func (h* YamlFileConfig) Maxlines() string { return h.Maxlines_ }
+func (h* YamlFileConfig) Daily() bool { return h.Daily_ }
+func (h* YamlFileConfig) Sanitize() bool { return h.Sanitize_ }
 
-type _SocketConfig struct {
+type YamlSocketConfig struct {
 	Enable_   bool   `yaml:"enable"`
 	Category_ string `yaml:"category"`
 	Level_    string `yaml:"level"`
@@ -49,36 +49,36 @@ type _SocketConfig struct {
 	Protocol_ string `yaml:"protocol"`
 }
 
-func (h* _SocketConfig) Enable() bool { return h.Enable_ }
-func (h* _SocketConfig) Category() string { return h.Category_ }
-func (h* _SocketConfig) Level() string { return h.Level_ }
-func (h* _SocketConfig) Pattern() string { return h.Pattern_ }
-func (h* _SocketConfig) Addr() string { return h.Addr_ }
-func (h* _SocketConfig) Protocol() string { return h.Protocol_ }
+func (h* YamlSocketConfig) Enable() bool { return h.Enable_ }
+func (h* YamlSocketConfig) Category() string { return h.Category_ }
+func (h* YamlSocketConfig) Level() string { return h.Level_ }
+func (h* YamlSocketConfig) Pattern() string { return h.Pattern_ }
+func (h* YamlSocketConfig) Addr() string { return h.Addr_ }
+func (h* YamlSocketConfig) Protocol() string { return h.Protocol_ }
 
 
 // LogConfig presents json log config struct
-type _LogConfig struct {
-	Console_ *_ConsoleConfig  `yaml:"console"`
-	Files_   []*_FileConfig   `yaml:"files"`
-	Sockets_ []*_SocketConfig `yaml:"sockets"`
+type YamlLogConfig struct {
+	Console_ *YamlConsoleConfig  `yaml:"console"`
+	Files_   []*YamlFileConfig   `yaml:"files"`
+	Sockets_ []*YamlSocketConfig `yaml:"sockets"`
 }
 
-func (h* _LogConfig) Console() IConsoleConfig { return h.Console_ }
-func (h* _LogConfig) Files() []IFileConfig {
+func (h* YamlLogConfig) Console() IConsoleConfig { return h.Console_ }
+func (h* YamlLogConfig) Files() []IFileConfig {
 	ret := make([]IFileConfig, len(h.Files_))
 	for i, f := range h.Files_ { ret[i] = f }
 	return ret
 }
-func (h* _LogConfig) Sockets() []ISocketConfig {
+func (h* YamlLogConfig) Sockets() []ISocketConfig {
 	ret := make([]ISocketConfig, len(h.Sockets_))
 	for i, s := range h.Sockets_ { ret[i] = s }
 	return ret
 }
 
 
-func (log Logger) InitWithYamlConfig(config string) {
-	var lc _LogConfig
-	if err := yaml.Unmarshal([]byte(config), lc); err != nil { panic(err) }
-	log.InitWithConfig(&lc)
+func ParseYamlConfig(config string) (*YamlLogConfig, error) {
+	var lc YamlLogConfig
+	err := yaml.Unmarshal([]byte(config), &lc)
+	return &lc, err
 }

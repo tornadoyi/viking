@@ -24,14 +24,14 @@ type Task struct {
 	arguments			[]reflect.Value
 	state				int
 	result				interface{}
-	error				interface{}
+	error				error
 	wg					sync.WaitGroup
 	stack				runtime.Stack
 }
 
 func (h *Task) State() int { return h.state }
 
-func (h *Task) Error() interface{} { return h.error }
+func (h *Task) Error() error { return h.error }
 
 func (h *Task) Result() interface{} { return h.result }
 
