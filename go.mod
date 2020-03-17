@@ -1,4 +1,4 @@
-module viking
+module github.com/tornadoyi/viking
 
 go 1.14
 

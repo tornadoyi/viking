@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"sort"
 	"time"
-	"viking/log"
-	"viking/task"
+	"github.com/tornadoyi/viking/log"
+	"github.com/tornadoyi/viking/task"
 )
 
 var (

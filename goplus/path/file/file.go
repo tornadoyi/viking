@@ -5,7 +5,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"viking/goplus/path/filepath"
+	"github.com/tornadoyi/viking/goplus/path/filepath"
 )
 
 

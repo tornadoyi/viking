@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	l4g "viking/log/log4go"
+	l4g "github.com/tornadoyi/viking/log/log4go"
 )
 
 var (

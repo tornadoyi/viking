@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-	. "viking/goplus/core"
-	"viking/goplus/runtime"
+	. "github.com/tornadoyi/viking/goplus/core"
+	"github.com/tornadoyi/viking/goplus/runtime"
 )
 
 const (

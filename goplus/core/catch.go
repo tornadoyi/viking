@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"viking/goplus/runtime"
-	"viking/log"
+	"github.com/tornadoyi/viking/goplus/runtime"
+	"github.com/tornadoyi/viking/log"
 )
 
 var (
