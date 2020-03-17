@@ -5,16 +5,15 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	vfilepath "viking/goplus/path/filepath"
+	"viking/goplus/path/filepath"
 )
 
 
 func Save(filename string, data []byte, perm os.FileMode) error {
 	// create all dirs
-	filename = vfilepath.Render(filename)
+	filename = filepath.Render(filename)
 	dir := filepath.Dir(filename)
-	if !vfilepath.IsDir(dir) {
+	if !filepath.IsDir(dir) {
 		err := os.MkdirAll(dir, perm)
 		if err != nil { return err }
 	}
