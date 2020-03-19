@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	MAX_STACK_DEPTH		= 32
+	MAX_STACK_DEPTH		= 64
 )
 
 var (

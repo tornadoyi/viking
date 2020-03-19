@@ -3,13 +3,13 @@ package task
 import (
 	"errors"
 	"fmt"
-	"log"
+	. "github.com/tornadoyi/viking/goplus/core"
+	"github.com/tornadoyi/viking/goplus/runtime"
+	"github.com/tornadoyi/viking/log"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
-	. "github.com/tornadoyi/viking/goplus/core"
-	"github.com/tornadoyi/viking/goplus/runtime"
 )
 
 const (
@@ -66,7 +66,7 @@ func (h *Task) Start(){
 		}()
 		defer CatchCallback(func(info *PanicInfo){
 			h.error = info.Error()
-			log.Fatal(strings.Join([]string{
+			log.Critical(strings.Join([]string{
 				"A task error occurred as below",
 				fmt.Sprintf("%v", h.stack),
 			}, "\n"))

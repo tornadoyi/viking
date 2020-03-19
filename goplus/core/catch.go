@@ -3,10 +3,9 @@ package core
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"github.com/tornadoyi/viking/goplus/runtime"
 	"github.com/tornadoyi/viking/log"
+	"strings"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 			fmt.Sprintf("%v", info.stack),
 			fmt.Sprintf("error: %v\n", info.Error()),
 		)
-		log.Critical(os.Stderr, strings.Join(msgs, "\n"))
+		log.Critical(strings.Join(msgs, "\n"))
 	}
 )
 
@@ -44,6 +43,6 @@ func CatchCallback(cb func(*PanicInfo)) {
 	err := recover()
 	if err == nil { return }
 	info := &PanicInfo{errors.New(fmt.Sprintf("%v", err)), runtime.Trace(4)}
-	if cb != nil { cb(info) }
 	if catchErrCallback != nil { catchErrCallback(info) }
+	if cb != nil { cb(info) }
 }

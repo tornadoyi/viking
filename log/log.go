@@ -55,6 +55,8 @@ func CreateLogger(name string) Logger{
 // export
 type Logger = l4g.Logger
 
+type YamlLogConfig = l4g.YamlLogConfig
+
 func Finest(arg0 interface{}, args ...interface{}) { defaultLogger.Finest(arg0, args...) }
 
 func Fine(arg0 interface{}, args ...interface{}) { defaultLogger.Fine(arg0, args...) }
@@ -71,4 +73,4 @@ func Error(arg0 interface{}, args ...interface{}) { defaultLogger.Error(arg0, ar
 
 func Critical(arg0 interface{}, args ...interface{}) { defaultLogger.Critical(arg0, args...) }
 
-func ParseYamlConfig(config string) (*l4g.YamlLogConfig, error) { return l4g.ParseYamlConfig(config) }
+func ParseYamlConfig(config string) (*YamlLogConfig, error) { return l4g.ParseYamlConfig(config) }

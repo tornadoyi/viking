@@ -96,14 +96,15 @@ func Start(){
 	// execute all configs
 	cfgs := make([]*Config, 0, len(configs))
 	for _, c := range configs{ cfgs = append(cfgs, c) }
-	updateConfigs(cfgs)
+	if !updateConfigs(cfgs) { panic("config inistalization failed") }
+
 
 	// add schedule
 	for _, c := range configs{ addSchedule(c) }
 }
 
 
-func updateConfigs(configs []*Config){
+func updateConfigs(configs []*Config) bool{
 	priors := make([]int, 0, len(configs))
 	priorConfigs := make(map[int][]*Config)
 
@@ -141,5 +142,6 @@ func updateConfigs(configs []*Config){
 		log.Error(e)
 	}
 
+	return len(errs) == 0
 }
 
