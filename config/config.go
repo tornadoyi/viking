@@ -3,15 +3,17 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/tornadoyi/viking/goplus/core"
 	"reflect"
 	"sort"
+	"sync/atomic"
 	"time"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/task"
 )
 
 var (
-	configs 		= make(map[string]*Config)
+	configs 		= core.AtomicDict{}
 	timers			= make(map[time.Duration]*UpdateTimer)
 )
 
@@ -22,7 +24,7 @@ type Config struct {
 	arguments		[]reflect.Value
 	priority		int
 	schedule		time.Duration
-	data			interface{}
+	data			atomic.Value
 
 }
 
@@ -51,7 +53,7 @@ type UpdateTimer struct {
 
 
 func Add(name string, f interface{}, args... interface{}) *Config{
-	if _, ok := configs[name]; ok { panic(errors.New(fmt.Sprintf("Repeated config %k", name))) }
+	if configs.Exists(name) { panic(errors.New(fmt.Sprintf("Repeated config %k", name))) }
 	vargs := make([]reflect.Value, len(args))
 	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
 	config := &Config{
@@ -60,17 +62,17 @@ func Add(name string, f interface{}, args... interface{}) *Config{
 		vargs,
 		1,
 		0,
-		nil,
+		atomic.Value{},
 	}
-	configs[name] = config
+	configs.Set(name, config)
 	return config
 }
 
 
 func GetContent(name string) interface{}{
-	c, ok := configs[name]
+	c, ok := configs.Get(name)
 	if !ok { panic(errors.New(fmt.Sprintf("Config %v is non-existent", name))) }
-	return c.data
+	return c.(*Config).data.Load()
 }
 
 
@@ -94,13 +96,16 @@ func Start(){
 	}
 
 	// execute all configs
-	cfgs := make([]*Config, 0, len(configs))
-	for _, c := range configs{ cfgs = append(cfgs, c) }
+	cfgs := make([]*Config, 0)
+	configs.Range(func(key, value interface{}) bool {
+		cfgs = append(cfgs, value.(*Config))
+		return true
+	})
 	if !updateConfigs(cfgs) { panic("config inistalization failed") }
 
 
 	// add schedule
-	for _, c := range configs{ addSchedule(c) }
+	for _, c := range cfgs{ addSchedule(c) }
 }
 
 
@@ -129,7 +134,7 @@ func updateConfigs(configs []*Config) bool{
 		for _, c := range list{
 			ts.Add(func(c *Config) {
 				data := c.Execute()
-				c.data = data
+				c.data.Store(data)
 			}, c)
 		}
 		ts.Start()

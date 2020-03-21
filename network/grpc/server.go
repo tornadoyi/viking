@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	servers = core.AtomDict{}
+	servers = core.AtomicDict{}
 )
 
 
