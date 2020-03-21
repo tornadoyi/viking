@@ -3,44 +3,87 @@ package grpc
 import (
 	"errors"
 	"fmt"
+	"github.com/tornadoyi/viking/goplus/core"
+	"github.com/tornadoyi/viking/log"
+	"net"
 	"github.com/tornadoyi/viking/network/grpc/keepalive"
-	"sync"
+	"reflect"
+	"runtime"
 	_grpc "google.golang.org/grpc"
 )
 
 var (
-	servers = make(map[string]*Server, 0)
-	mutex sync.Mutex
+	servers = core.AtomDict{}
 )
 
 
-type Server = _grpc.Server
+func CreateServer(name string, network string, address string, opt ...ServerOption) (*Server, error) {
 
-func CreateServer(name string, opt ...ServerOption) (*Server, error) {
-	defer mutex.Unlock()
-	mutex.Lock()
+	if servers.Exists(name) { return nil, errors.New(fmt.Sprintf("Repteated server %v", name))}
 
-	if _, ok := servers[name]; ok { return nil, errors.New(fmt.Sprintf("Repteated server %v", name))}
+	// create listener
+	listener, err := net.Listen(network, address)
+	if err != nil { return nil, err}
 
-	server := _grpc.NewServer(opt...)
-	servers[name] = server
+	// create grpc server
+	server := &Server{_grpc.NewServer(opt...),name, listener,network, address}
 
+	// destructor
+	runtime.SetFinalizer(server, func (server *Server){
+		if err := server.listener.Close(); err != nil {
+			log.Error(err)
+		}
+	})
+
+	// save
+	servers.Set(name, server)
 	return server, nil
 }
 
 
 func GetServer(name string) (*Server, bool) {
-	defer mutex.Unlock()
-	mutex.Lock()
-	server, ok := servers[name]
-	return server, ok
+	server, ok := servers.Get(name)
+	return server.(*Server), ok
 }
 
 func RemoveServer(name string) {
-	defer mutex.Unlock()
-	mutex.Lock()
-	if _, ok := servers[name]; !ok { return }
-	delete(servers, name)
+	servers.Delete(name)
+}
+
+
+type Server struct {
+	*_grpc.Server
+	name				string
+	listener			net.Listener
+	network				string
+	address				string
+}
+
+func (h *Server) Name() string { return h.name }
+
+func (h *Server) Network() string { return h.network }
+
+func (h *Server) Address() string { return h.address }
+
+func (h *Server) Serve() error{ return h.Server.Serve(h.listener) }
+
+
+
+func (h *Server) RegisterService(service interface{}, register interface{}) error {
+	vf := reflect.ValueOf(register)
+	if vf.Kind() != reflect.Func {
+		return errors.New(fmt.Sprintf("Register failed for server %v with invalid function type %v", h.name, vf.Kind()))
+	}
+
+	paramCount := reflect.TypeOf(register).NumIn()
+	if reflect.TypeOf(register).NumIn() != 2 {
+		return errors.New(fmt.Sprintf("Invalid register parameters for server %v, parameter count is %v, expect 2", h.name, paramCount))
+	}
+
+	args := []reflect.Value{reflect.ValueOf(h.Server), reflect.ValueOf(service)}
+	vf.Call(args)
+
+	return nil
 }
 
 

@@ -2,8 +2,8 @@
 package keepalive
 
 import (
+	_grpc "google.golang.org/grpc"
 	_keepalive "google.golang.org/grpc/keepalive"
-	"github.com/tornadoyi/viking/network/grpc"
 	"time"
 )
 
@@ -25,9 +25,9 @@ type ServerParametersConfig struct {
 	Timeout 					time.Duration 			`yaml:"timeout"`
 }
 
-func (h* ServerParametersConfig) ServerOption() grpc.ServerOption {
+func (h* ServerParametersConfig) ServerOption() _grpc.ServerOption {
 	if h == nil { return  nil}
-	return grpc.KeepaliveParams(ServerParameters{
+	return _grpc.KeepaliveParams(ServerParameters{
 		h.MaxConnectionIdle,
 		h.MaxConnectionAge,
 		h.MaxConnectionAgeGrace,
@@ -43,9 +43,9 @@ type ClientParametersConfig struct {
 	PermitWithoutStream			bool					`yaml:"permit_without_stream"`
 }
 
-func (h* ClientParametersConfig) DialOption() grpc.DialOption {
+func (h* ClientParametersConfig) DialOption() _grpc.DialOption {
 	if h == nil { return  nil}
-	return grpc.WithKeepaliveParams(ClientParameters{h.Time, h.Timeout, h.PermitWithoutStream})
+	return _grpc.WithKeepaliveParams(ClientParameters{h.Time, h.Timeout, h.PermitWithoutStream})
 }
 
 
@@ -54,7 +54,7 @@ type EnforcementPolicyConfig struct {
 	PermitWithoutStream 		bool					`yaml:"permit_without_stream"`
 }
 
-func (h* EnforcementPolicyConfig) ServerOption() grpc.ServerOption {
+func (h* EnforcementPolicyConfig) ServerOption() _grpc.ServerOption {
 	if h == nil { return  nil}
-	return grpc.KeepaliveEnforcementPolicy(EnforcementPolicy{h.MinTime, h.PermitWithoutStream})
+	return _grpc.KeepaliveEnforcementPolicy(EnforcementPolicy{h.MinTime, h.PermitWithoutStream})
 }
