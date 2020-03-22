@@ -70,8 +70,11 @@ func (h *Server) Address() string { return h.address }
 
 func (h *Server) Serve() error{ return h.Server.Serve(h.listener) }
 
+func (h *Server) Stop() {  h.Server.Stop() }
 
+func (h *Server) GracefulStop() {  h.Server.GracefulStop() }
 
+func (h *Server) GetServiceInfo() map[string]ServiceInfo {  return h.Server.GetServiceInfo() }
 
 func (h *Server) RegisterService(service interface{}, register interface{}) error {
 	vf := reflect.ValueOf(register)
@@ -127,6 +130,7 @@ func (h* ServerConfig) ServerOptions() []ServerOption {
 
 // export ServerOption
 type ServerOption = _grpc.ServerOption
+type ServiceInfo = _grpc.ServiceInfo
 var ChainStreamInterceptor = _grpc.ChainStreamInterceptor
 var ChainUnaryInterceptor = _grpc.ChainUnaryInterceptor
 var ConnectionTimeout = _grpc.ConnectionTimeout

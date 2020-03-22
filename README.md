@@ -2,17 +2,18 @@
 
 [viking](https://github.com/tornadoyi/viking) is fastest golang server framework with variety of popular modules.
 
+## Install Dependencies
+```bash
+go get -u github.com/toolkits/file
+go get -u gopkg.in/yaml.v2
+go get -u gopkg.in/alecthomas/kingpin.v2
+go get github.com/gomodule/redigo/redis
+```
 
 ## Quick Install
 
 ```bash
-    # setup viking
-    go get -u github.com/tornadoyi/viking
-    
-    # setup dependencies
-    go get -u github.com/toolkits/file
-    go get -u gopkg.in/yaml.v2
-    go get -u gopkg.in/alecthomas/kingpin.v2
+go get -u github.com/tornadoyi/viking
 ```
 
 
