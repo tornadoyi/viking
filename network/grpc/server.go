@@ -27,13 +27,7 @@ func CreateServer(name string, network string, address string, opt ...ServerOpti
 
 	// create grpc server
 	server := &Server{_grpc.NewServer(opt...),name, listener,network, address}
-
-	// destructor
-	runtime.SetFinalizer(server, func (server *Server){
-		if err := server.listener.Close(); err != nil {
-			log.Error(err)
-		}
-	})
+	server.init()
 
 	// save
 	servers.Set(name, server)
@@ -43,7 +37,8 @@ func CreateServer(name string, network string, address string, opt ...ServerOpti
 
 func GetServer(name string) (*Server, bool) {
 	server, ok := servers.Get(name)
-	return server.(*Server), ok
+	if !ok { return nil, false }
+	return server.(*Server), true
 }
 
 func RemoveServer(name string) {
@@ -59,6 +54,14 @@ type Server struct {
 	address				string
 }
 
+func (h* Server) init() {
+	runtime.SetFinalizer(h, func (server *Server){
+		if err := server.listener.Close(); err != nil {
+			log.Error(err)
+		}
+	})
+}
+
 func (h *Server) Name() string { return h.name }
 
 func (h *Server) Network() string { return h.network }
@@ -66,6 +69,7 @@ func (h *Server) Network() string { return h.network }
 func (h *Server) Address() string { return h.address }
 
 func (h *Server) Serve() error{ return h.Server.Serve(h.listener) }
+
 
 
 

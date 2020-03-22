@@ -3,55 +3,90 @@ package grpc
 import (
 	"errors"
 	"fmt"
+	"github.com/tornadoyi/viking/goplus/core"
+	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/network/grpc/backoff"
 	"github.com/tornadoyi/viking/network/grpc/keepalive"
 	_grpc "google.golang.org/grpc"
-	"sync"
+	"reflect"
+	"runtime"
 	"time"
 )
 
 var (
-	clients = make(map[string]*Client)
-	clientMutex sync.Mutex
+	clients	 = core.AtomicDict{}
 )
 
 
-type Client = _grpc.ClientConn
+func CreateClient(name string, target string, register interface{}, options... DialOption) (*Client, error) {
+	if clients.Exists(name) { return nil, errors.New(fmt.Sprintf("Repteated client %v", name))}
 
-
-
-func CreateClient(name string, address string,  opt ...DialOption) (*Client, error) {
-	defer clientMutex.Unlock()
-	clientMutex.Lock()
-
-	if _, ok := clients[name]; ok { return nil, errors.New(fmt.Sprintf("Repteated client %v", name))}
-	client, err := _grpc.Dial(address, opt...)
+	// dial
+	conn, err := _grpc.Dial(target, options...)
 	if err != nil { return nil, err}
-	clients[name] = client
 
+	// register service
+	vf := reflect.ValueOf(register)
+	if vf.Kind() != reflect.Func {
+		return nil, errors.New(fmt.Sprintf("Register failed for client %v with invalid function type %v", name, vf.Kind()))
+	}
+	if parmInCount := reflect.TypeOf(register).NumIn(); parmInCount != 1 {
+		return nil, errors.New(fmt.Sprintf("Invalid register parameters for client %v, input parameter count is %v, expect 1", name, parmInCount))
+	}
+	if parmOutCount := reflect.TypeOf(register).NumOut(); parmOutCount != 1 {
+		return nil, errors.New(fmt.Sprintf("Invalid register parameters for client %v, output parameter count is %v, expect 1", name, parmOutCount))
+	}
+	args := []reflect.Value{reflect.ValueOf(conn)}
+	service := vf.Call(args)[0].Interface()
+
+	// create client and save
+	client := &Client{name, conn, service}
+	client.init()
+	clients.Set(name, client)
 	return client, nil
 }
 
-
-func GetClinet(name string) (*Client, bool) {
-	defer clientMutex.Unlock()
-	clientMutex.Lock()
-	client, ok := clients[name]
-	return client, ok
+func GetClient(name string) (*Client, bool) {
+	c, ok := clients.Get(name)
+	if !ok { return nil, false }
+	return c.(*Client), true
 }
 
-func RemoveClient(name string) {
-	defer clientMutex.Unlock()
-	clientMutex.Lock()
-	if _, ok := clients[name]; !ok { return }
-	delete(clients, name)
+func RemoveClient(name string){
+	clients.Delete(name)
 }
+
+
+
+type ClientConn = _grpc.ClientConn
+
+type Client struct {
+	name						string
+	connection					*ClientConn
+	service						interface{}
+}
+
+func (h* Client) init() {
+	runtime.SetFinalizer(h, func (client *Client){
+		if err := h.connection.Close(); err != nil {
+			log.Error(err)
+		}
+	})
+}
+
+func (h *Client) Name() string { return h.name }
+
+func (h *Client) Service() interface{} { return h.service }
+
+
+
 
 
 type DialConfig struct {
 	FailOnNonTempDialError		*bool										`yaml:"fail_on_non_temp_dial_error"`
 	Authority					*string										`yaml:"authority"`
 	Block						*bool										`yaml:"block"`
+	BalancerName				*string										`yaml:"balance_name"`
 	ChannelzParentID			*int64										`yaml:"channelz_parent_id"`
 	DefaultServiceConfig		*string										`yaml:"default_service_config"`
 	DisableHealthCheck			*bool										`yaml:"disable_health_check"`
@@ -75,6 +110,7 @@ func (h *DialConfig) DialOptions() []DialOption {
 	if h.FailOnNonTempDialError != nil { options = append(options, FailOnNonTempDialError(*h.FailOnNonTempDialError)) }
 	if h.Authority != nil { options = append(options, WithAuthority(*h.Authority)) }
 	if h.Block != nil && *h.Block { options = append(options, WithBlock()) }
+	if h.BalancerName != nil { options = append(options, WithBalancerName(*h.BalancerName)) }
 	if h.ChannelzParentID != nil { options = append(options, WithChannelzParentID(*h.ChannelzParentID)) }
 	if h.DefaultServiceConfig != nil { options = append(options, WithDefaultServiceConfig(*h.DefaultServiceConfig)) }
 	if h.DisableHealthCheck != nil && *h.DisableHealthCheck { options = append(options, WithDisableHealthCheck()) }
