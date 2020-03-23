@@ -18,43 +18,50 @@ type EnforcementPolicy = _keepalive.EnforcementPolicy
 
 
 type ServerParametersConfig struct {
-	MaxConnectionIdle 			time.Duration 			`yaml:"max_connection_idle"`
-	MaxConnectionAge 			time.Duration			`yaml:"max_connection_age"`
-	MaxConnectionAgeGrace 		time.Duration 			`yaml:"max_connection_age_grace"`
-	Time 						time.Duration 			`yaml:"time"`
-	Timeout 					time.Duration 			`yaml:"timeout"`
+	MaxConnectionIdle 			string 					`yaml:"max_connection_idle"`
+	MaxConnectionAge 			string					`yaml:"max_connection_age"`
+	MaxConnectionAgeGrace 		string 					`yaml:"max_connection_age_grace"`
+	Time 						string 					`yaml:"time"`
+	Timeout 					string 					`yaml:"timeout"`
 }
 
 func (h* ServerParametersConfig) ServerOption() _grpc.ServerOption {
 	if h == nil { return  nil}
-	return _grpc.KeepaliveParams(ServerParameters{
-		h.MaxConnectionIdle,
-		h.MaxConnectionAge,
-		h.MaxConnectionAgeGrace,
-		h.Time,
-		h.Timeout,
-	})
+	p := ServerParameters{}
+	p.MaxConnectionIdle, _ = time.ParseDuration(h.MaxConnectionIdle)
+	p.MaxConnectionAge, _ = time.ParseDuration(h.MaxConnectionAge)
+	p.MaxConnectionAgeGrace, _ = time.ParseDuration(h.MaxConnectionAgeGrace)
+	p.Time, _ = time.ParseDuration(h.Time)
+	p.Timeout, _ = time.ParseDuration(h.Timeout)
+	return _grpc.KeepaliveParams(p)
 }
 
 
 type ClientParametersConfig struct {
-	Time 						time.Duration 			`yaml:"time"`
-	Timeout 					time.Duration 			`yaml:"timeout"`
+	Time 						string		 			`yaml:"time"`
+	Timeout 					string		 			`yaml:"timeout"`
 	PermitWithoutStream			bool					`yaml:"permit_without_stream"`
 }
 
 func (h* ClientParametersConfig) DialOption() _grpc.DialOption {
 	if h == nil { return  nil}
-	return _grpc.WithKeepaliveParams(ClientParameters{h.Time, h.Timeout, h.PermitWithoutStream})
+	p := ClientParameters{}
+	p.Time, _ = time.ParseDuration(h.Time)
+	p.Timeout, _ = time.ParseDuration(h.Timeout)
+	p.PermitWithoutStream = h.PermitWithoutStream
+	return _grpc.WithKeepaliveParams(p)
 }
 
 
 type EnforcementPolicyConfig struct {
-	MinTime 					time.Duration 			`yaml:"min_time"`
+	MinTime 					string					`yaml:"min_time"`
 	PermitWithoutStream 		bool					`yaml:"permit_without_stream"`
 }
 
 func (h* EnforcementPolicyConfig) ServerOption() _grpc.ServerOption {
 	if h == nil { return  nil}
-	return _grpc.KeepaliveEnforcementPolicy(EnforcementPolicy{h.MinTime, h.PermitWithoutStream})
+	p := EnforcementPolicy{}
+	p.MinTime, _ = time.ParseDuration(h.MinTime)
+	p.PermitWithoutStream = h.PermitWithoutStream
+	return _grpc.KeepaliveEnforcementPolicy(p)
 }

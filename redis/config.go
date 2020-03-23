@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"github.com/tornadoyi/viking/log"
 	"time"
 )
 
@@ -9,9 +10,28 @@ import (
 type PoolConfig struct {
 	MaxIdle 					*int						`yaml:"max_idle"`
 	MaxActive 					*int						`yaml:"max_active"`
-	IdleTimeout 				*time.Duration				`yaml:"idle_timeout"`
+	IdleTimeout 				*string						`yaml:"idle_timeout"`
 	Wait 						*bool						`yaml:"wait"`
-	MaxConnLifetime 			*time.Duration				`yaml:"max_conn_life_time"`
+	MaxConnLifetime 			*string						`yaml:"max_conn_lifetime"`
+}
+
+func (h *PoolConfig) PoolOptions() []PoolOption {
+	if h == nil { return nil }
+	options := make([]PoolOption, 0)
+	if h.MaxIdle != nil { options = append(options, PoolMaxIdle(*h.MaxIdle)) }
+	if h.MaxActive != nil { options = append(options, PoolMaxActive(*h.MaxActive)) }
+	if h.IdleTimeout != nil {
+		if d, err := time.ParseDuration(*h.IdleTimeout); err == nil {
+			options = append(options, PoolIdleTimeout(d))
+		} else { log.Warn("IdleTimeout parse failed, error: %v", err) }
+	}
+	if h.Wait != nil { options = append(options, PoolWait(*h.Wait)) }
+	if h.MaxConnLifetime != nil {
+		if d, err := time.ParseDuration(*h.MaxConnLifetime); err == nil {
+			options = append(options, PoolMaxConnLifetime(d))
+		} else { log.Warn("MaxConnLifetime parse failed, error: %v", err) }
+	}
+	return options
 }
 
 
@@ -29,27 +49,44 @@ func PoolMaxConnLifetime(v time.Duration) PoolOption { return PoolOption{func(p 
 
 type DialConfig struct {
 	ClientName					*string						`yaml:"client_name"`
-	ConnectTimeout				*time.Duration				`yaml:"connect_timeout"`
+	ConnectTimeout				*string						`yaml:"connect_timeout"`
 	Database					*int						`yaml:"database"`
-	KeepAlive					*time.Duration				`yaml:"keep_alive"`
+	KeepAlive					*string						`yaml:"keep_alive"`
 	Password					*string						`yaml:"password"`
-	ReadTimeout					*time.Duration				`yaml:"read_timeout"`
+	ReadTimeout					*string						`yaml:"read_timeout"`
 	//TLSConfig
 	TLSSkipVerify				*bool						`yaml:"tls_skip_verify"`
 	UseTLS						*bool						`yaml:"use_tls"`
-	WriteTimeout				*time.Duration				`yaml:"write_timeout"`
+	WriteTimeout				*string						`yaml:"write_timeout"`
 }
 
 func (h *DialConfig) DialOptions() []DialOption {
+	if h == nil { return  nil}
 	options := make([]DialOption, 0, 20)
 	if h.ClientName != nil { options = append(options, DialClientName(*h.ClientName)) }
-	if h.ConnectTimeout != nil { options = append(options, DialConnectTimeout(*h.ConnectTimeout)) }
+	if h.ConnectTimeout != nil {
+		if d, err := time.ParseDuration(*h.ConnectTimeout); err == nil {
+			options = append(options, DialConnectTimeout(d))
+		} else { log.Warn("ConnectTimeout parse failed, error: %v", err) }
+	}
 	if h.Database != nil { options = append(options, DialDatabase(*h.Database)) }
-	if h.KeepAlive != nil { options = append(options, DialKeepAlive(*h.KeepAlive)) }
+	if h.KeepAlive != nil {
+		if d, err := time.ParseDuration(*h.KeepAlive); err == nil {
+			options = append(options, DialKeepAlive(d))
+		} else { log.Warn("KeepAlive parse failed, error: %v", err) }
+	}
 	if h.Password != nil { options = append(options, DialPassword(*h.Password)) }
-	if h.ReadTimeout != nil { options = append(options, DialReadTimeout(*h.ReadTimeout)) }
+	if h.ReadTimeout != nil {
+		if d, err := time.ParseDuration(*h.ReadTimeout); err == nil {
+			options = append(options, DialReadTimeout(d))
+		} else { log.Warn("ReadTimeout parse failed, error: %v", err) }
+	}
 	if h.TLSSkipVerify != nil { options = append(options, DialTLSSkipVerify(*h.TLSSkipVerify)) }
 	if h.UseTLS != nil { options = append(options, DialUseTLS(*h.UseTLS)) }
-	if h.WriteTimeout != nil { options = append(options, DialWriteTimeout(*h.WriteTimeout)) }
+	if h.WriteTimeout != nil {
+		if d, err := time.ParseDuration(*h.WriteTimeout); err == nil {
+			options = append(options, DialWriteTimeout(d))
+		} else { log.Warn("WriteTimeout parse failed, error: %v", err) }
+	}
 	return options
 }

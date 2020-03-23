@@ -132,14 +132,14 @@ func (h *DialConfig) DialOptions() []DialOption {
 
 type ConnectParamsConfig struct {
 	Backoff 					backoff.Config							`yaml:"backoff"`
-	MinConnectTimeout 			time.Duration							`yaml:"min_connect_timeout"`
+	MinConnectTimeout 			string									`yaml:"min_connect_timeout"`
 }
 
 func (h *ConnectParamsConfig) DialOption() DialOption {
-	return WithConnectParams(_grpc.ConnectParams{
-		h.Backoff.Config(),
-		h.MinConnectTimeout,
-	})
+	p := _grpc.ConnectParams{}
+	p.Backoff = h.Backoff.Config()
+	p.MinConnectTimeout, _ = time.ParseDuration(h.MinConnectTimeout)
+	return WithConnectParams(p)
 }
 
 

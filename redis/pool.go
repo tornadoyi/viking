@@ -22,7 +22,7 @@ func (h *Pool) init() {
 func (h *Pool) Do(commandName string, args ...interface{}) (*Result)  {
 	conn := h.Get()
 	defer conn.Close()
-	reply, err := conn.Do(commandName, args)
+	reply, err := conn.Do(commandName, args...)
 	return &Result{reply, err}
 }
 
