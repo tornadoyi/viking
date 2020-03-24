@@ -9,6 +9,7 @@ go get -u gopkg.in/yaml.v2
 go get -u gopkg.in/alecthomas/kingpin.v2
 go get -u github.com/gomodule/redigo/redis
 go get -u github.com/hashicorp/consul
+go get -u github.com/valyala/fasthttp
 ```
 
 ## Quick Install
