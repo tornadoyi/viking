@@ -9,16 +9,23 @@ import (
 )
 
 
+var (
+	servers 	=  		map[string]*Server{}
+)
 
 
 func RegisterServer(regCfg *AgentServiceRegistrationConfig) error {
+
+	// check
+	if regCfg == nil { return fmt.Errorf("Empty registration config")}
+	registration := regCfg.AgentServiceRegistration()
+	if _, ok := servers[registration.Name]; ok { return fmt.Errorf("Repeated registration %v", registration.Name)}
 
 	// create client
 	client, err := _consul.NewClient(_consul.DefaultConfig())
 	if err != nil { return err}
 
 	// register
-	registration := regCfg.AgentServiceRegistration()
 	err = client.Agent().ServiceRegister(registration)
 	if err != nil { return err }
 
@@ -33,6 +40,8 @@ func RegisterServer(regCfg *AgentServiceRegistrationConfig) error {
 	})
 	t.Start()
 
+	// save
+	servers[registration.Name] = &Server{client, registration}
 	return nil
 }
 
