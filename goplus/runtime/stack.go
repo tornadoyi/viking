@@ -11,22 +11,22 @@ const (
 )
 
 var (
-	stackStringMethod	func(h Stack) string
+	stackStringMethod	func(h StackInfo) string
 )
 
-func SetStackStringMethod(f func(h Stack) string){ stackStringMethod = f }
+func SetStackStringMethod(f func(h StackInfo) string){ stackStringMethod = f }
 
 
-type Stack []uintptr
+type StackInfo []uintptr
 
-func Trace(skip int) Stack{
+func Trace(skip int) StackInfo{
 	var pcs [MAX_STACK_DEPTH]uintptr
 	n := runtime.Callers(skip, pcs[:])
-	var s Stack = pcs[0:n]
+	var s StackInfo = pcs[0:n]
 	return s
 }
 
-func (h Stack) Frames() []runtime.Frame{
+func (h StackInfo) Frames() []runtime.Frame{
 	frames := runtime.CallersFrames(h)
 	frameList := make([]runtime.Frame, 0, len(h))
 	for ; ; {
@@ -37,7 +37,7 @@ func (h Stack) Frames() []runtime.Frame{
 	return frameList
 }
 
-func (h Stack) String() string{
+func (h StackInfo) String() string{
 	if stackStringMethod != nil { return stackStringMethod(h)}
 	frames := h.Frames()
 	msgs := make([]string, 0, len(frames))

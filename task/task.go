@@ -24,7 +24,7 @@ type Task struct {
 	result				interface{}
 	error				error
 	wg					sync.WaitGroup
-	stack				runtime.Stack
+	stack				runtime.StackInfo
 }
 
 func (h *Task) State() int { return h.state }

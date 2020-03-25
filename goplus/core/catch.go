@@ -24,12 +24,12 @@ var (
 
 type PanicInfo struct {
 	error		error
-	stack		runtime.Stack
+	stack		runtime.StackInfo
 }
 
 func (h *PanicInfo) Error() error { return h.error}
 
-func (h *PanicInfo) Stack() runtime.Stack { return h.stack}
+func (h *PanicInfo) Stack() runtime.StackInfo { return h.stack}
 
 func Catch(){
 	err := recover()

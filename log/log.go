@@ -16,14 +16,17 @@ var (
 
 
 func GetLogger(name string) Logger{
-	defer mutex.Unlock()
 	mutex.Lock()
+	defer mutex.Unlock()
+
 	log, ok := loggers[name]
 	if !ok { return nil}
 	return log
 }
 
 func SetDefaultLogger(log Logger) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	defaultLogger = log
 }
 
@@ -37,8 +40,8 @@ func createDefaultLogger() Logger{
 }
 
 func CreateLogger(name string) Logger{
-	defer mutex.Unlock()
 	mutex.Lock()
+	defer mutex.Unlock()
 
 	log := make(Logger)
 	if _, ok := loggers[name]; ok { panic(errors.New(fmt.Sprintf("Repeated logger name %v", name))) }
