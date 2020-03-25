@@ -1,19 +1,21 @@
 package redis
 
 import (
-	"errors"
 	"fmt"
 	_redis "github.com/gomodule/redigo/redis"
-	"github.com/tornadoyi/viking/goplus/core"
+	"sync"
 )
 
 var (
-	pools = core.AtomicDict{}
+	pools 			=	map[string]*Pool{}
+	mutex			= 	sync.RWMutex{}
 )
 
 func CreatePool(name string, network, host string, poolOptions []PoolOption, dialOptions []DialOption) (*Pool, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	// check
-	if pools.Exists(name) { return nil, errors.New(fmt.Sprintf("Repeated redis pool %v", name)) }
+	if _, ok := pools[name]; ok { return nil, fmt.Errorf("Repeated redis pool %v", name) }
 
 	// create pool
 	pool := &Pool{}
@@ -28,19 +30,25 @@ func CreatePool(name string, network, host string, poolOptions []PoolOption, dia
 	for _, opt := range poolOptions { opt.f(pool) }
 
 	// save
-	pools.Set(name, pool)
+	pools[name] = pool
 
 	return pool, nil
 }
 
 
 func GetPool(name string) (*Pool, bool) {
-	pool, ok := pools.Get(name)
+	mutex.RLock()
+	defer mutex.RUnlock()
+	pool, ok := pools[name]
 	if !ok { return nil, false }
-	return pool.(*Pool), true
+	return pool, true
 }
 
-func RemovePool(name string) { pools.Delete(name) }
+func RemovePool(name string) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	delete(pools, name)
+}
 
 
 

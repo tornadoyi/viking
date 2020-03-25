@@ -5,9 +5,7 @@ import (
 	"fmt"
 	. "github.com/tornadoyi/viking/goplus/core"
 	"github.com/tornadoyi/viking/goplus/runtime"
-	"github.com/tornadoyi/viking/log"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 )
@@ -66,10 +64,12 @@ func (h *Task) Start(){
 		}()
 		defer CatchCallback(func(info *PanicInfo){
 			h.error = info.Error()
+			/*
 			log.Critical(strings.Join([]string{
 				"A task error occurred as below",
 				fmt.Sprintf("%v", h.stack),
 			}, "\n"))
+			 */
 		})
 		result := h.function.Call(h.arguments)
 		h.result = result

@@ -1,20 +1,20 @@
 package config
 
 import (
-	"errors"
 	"fmt"
-	"github.com/tornadoyi/viking/goplus/core"
-	"reflect"
-	"sort"
-	"sync/atomic"
-	"time"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/task"
+	"reflect"
+	"sort"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 var (
-	configs 		= core.AtomicDict{}
-	timers			= make(map[time.Duration]*UpdateTimer)
+	configs 		= map[string]*Config{}
+	timers			= map[time.Duration]*time.Timer{}
+	mutex			= sync.RWMutex{}
 )
 
 
@@ -39,21 +39,17 @@ func (h *Config) Execute() interface{}{ return h.executor.Call(h.arguments)[0].I
 func (h* Config) SetPriority(priority int){ h.priority = priority }
 
 func (h* Config) SetSchedule(delay time.Duration){
-	if _, ok := timers[delay]; ok { return }
-	if delay <= 0 { panic(errors.New(fmt.Sprintf("Can not set timer's schedule with delay %v", delay))) }
 	h.schedule = delay
-}
-
-
-type UpdateTimer struct {
-	configs 	[]*Config
-	timer		*time.Timer
+	addTimer(delay)
 }
 
 
 
-func Add(name string, f interface{}, args... interface{}) *Config{
-	if configs.Exists(name) { panic(errors.New(fmt.Sprintf("Repeated config %k", name))) }
+func Add(name string, f interface{}, args... interface{}) (*Config, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	_, ok := configs[name]
+	if ok { return nil, fmt.Errorf("Repeated config %k", name)}
 	vargs := make([]reflect.Value, len(args))
 	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
 	config := &Config{
@@ -64,52 +60,33 @@ func Add(name string, f interface{}, args... interface{}) *Config{
 		0,
 		atomic.Value{},
 	}
-	configs.Set(name, config)
-	return config
+	configs[name] = config
+	return config, nil
 }
 
 
-func GetContent(name string) interface{}{
-	c, ok := configs.Get(name)
-	if !ok { panic(errors.New(fmt.Sprintf("Config %v is non-existent", name))) }
-	return c.(*Config).data.Load()
+func GetContent(name string) (interface{}, bool) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	c, ok := configs[name]
+	if !ok { return nil, false }
+	return c.data.Load(), true
 }
 
 
-func Start(){
-
-	addSchedule := func(c *Config){
-		if c.schedule <= 0 {return }
-		updater, ok := timers[c.schedule]
-		if ok {
-			updater.configs = append(updater.configs, c)
-			return
-		}
-		timer := time.AfterFunc(c.schedule, func(){
-			defer updater.timer.Reset(c.schedule)
-
-			updater, _ := timers[c.schedule]
-			t := task.Create(updateConfigs, updater.configs)
-			t.Wait()
-		})
-		timers[c.schedule] = &UpdateTimer{[]*Config{c}, timer}
-	}
+func Start() []error{
+	cfgs := make([]*Config, 0)
+	mutex.RLock()
+	for _, cfg := range configs { cfgs = append(cfgs, cfg) }
+	mutex.RUnlock()
 
 	// execute all configs
-	cfgs := make([]*Config, 0)
-	configs.Range(func(key, value interface{}) bool {
-		cfgs = append(cfgs, value.(*Config))
-		return true
-	})
-	if !updateConfigs(cfgs) { panic("config inistalization failed") }
+	return updateConfigs(cfgs)
 
-
-	// add schedule
-	for _, c := range cfgs{ addSchedule(c) }
 }
 
 
-func updateConfigs(configs []*Config) bool{
+func updateConfigs(configs []*Config) []error{
 	priors := make([]int, 0, len(configs))
 	priorConfigs := make(map[int][]*Config)
 
@@ -143,10 +120,44 @@ func updateConfigs(configs []*Config) bool{
 		errs = append(errs, ts.Errors()...)
 	}
 
-	for _, e := range errs {
-		log.Error(e)
-	}
-
-	return len(errs) == 0
+	return errs
 }
 
+
+func addTimer(delay time.Duration) {
+	if delay <= 0 {return }
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if _, ok := timers[delay]; ok { return }
+	timers[delay] = time.AfterFunc(delay, func() {
+		// collect configs
+		cfgs := make([]*Config, 0)
+		var timer *time.Timer
+		mutex.Lock()
+		timer, _ = timers[delay]
+		for _, cfg := range configs {
+			if cfg.schedule != delay { continue }
+			cfgs = append(cfgs, cfg)
+		}
+		// clean unused timer
+		if len(cfgs) == 0 || timer == nil  { delete(timers, delay) }
+		mutex.Unlock()
+
+		// exit when timer is unused
+		if len(cfgs) == 0 || timer == nil { return }
+
+		// update config
+		t := task.Create(updateConfigs, cfgs)
+		t.Wait()
+		if t.Error() != nil {
+			log.Error(t.Error())
+		} else {
+			errs := t.Result().([]error)
+			for _, err := range errs { log.Error(err) }
+		}
+
+		// reset timer
+		timer.Reset(delay)
+	})
+}

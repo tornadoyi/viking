@@ -3,23 +3,25 @@ package grpc
 import (
 	"errors"
 	"fmt"
-	"github.com/tornadoyi/viking/goplus/core"
 	"github.com/tornadoyi/viking/log"
 	"net"
 	"github.com/tornadoyi/viking/network/grpc/keepalive"
 	"reflect"
 	"runtime"
 	_grpc "google.golang.org/grpc"
+	"sync"
 )
 
 var (
-	servers = core.AtomicDict{}
+	servers 	= map[string]*Server{}
+	smutex		= sync.RWMutex{}
 )
 
 
 func CreateServer(name string, network string, address string, opt ...ServerOption) (*Server, error) {
-
-	if servers.Exists(name) { return nil, errors.New(fmt.Sprintf("Repteated server %v", name))}
+	smutex.Lock()
+	smutex.Unlock()
+	if _, ok := servers[name]; ok { return nil, fmt.Errorf("Repteated server %v", name)}
 
 	// create listener
 	listener, err := net.Listen(network, address)
@@ -30,19 +32,23 @@ func CreateServer(name string, network string, address string, opt ...ServerOpti
 	server.init()
 
 	// save
-	servers.Set(name, server)
+	servers[name] = server
 	return server, nil
 }
 
 
 func GetServer(name string) (*Server, bool) {
-	server, ok := servers.Get(name)
+	smutex.RLock()
+	defer smutex.RUnlock()
+	server, ok := servers[name]
 	if !ok { return nil, false }
-	return server.(*Server), true
+	return server, true
 }
 
 func RemoveServer(name string) {
-	servers.Delete(name)
+	smutex.Lock()
+	smutex.Unlock()
+	delete(servers, name)
 }
 
 

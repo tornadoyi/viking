@@ -3,23 +3,26 @@ package grpc
 import (
 	"errors"
 	"fmt"
-	"github.com/tornadoyi/viking/goplus/core"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/network/grpc/backoff"
 	"github.com/tornadoyi/viking/network/grpc/keepalive"
 	_grpc "google.golang.org/grpc"
 	"reflect"
 	"runtime"
+	"sync"
 	"time"
 )
 
 var (
-	clients	 = core.AtomicDict{}
+	clients		 = map[string]*Client{}
+	cmutex		 = sync.RWMutex{}
 )
 
 
 func CreateClient(name string, target string, register interface{}, options... DialOption) (*Client, error) {
-	if clients.Exists(name) { return nil, errors.New(fmt.Sprintf("Repteated client %v", name))}
+	cmutex.Lock()
+	defer cmutex.Unlock()
+	if _, ok := clients[name]; ok { return nil, fmt.Errorf("Repteated client %v", name)}
 
 	// dial
 	conn, err := _grpc.Dial(target, options...)
@@ -42,18 +45,22 @@ func CreateClient(name string, target string, register interface{}, options... D
 	// create client and save
 	client := &Client{name, conn, service}
 	client.init()
-	clients.Set(name, client)
+	clients[name] = client
 	return client, nil
 }
 
 func GetClient(name string) (*Client, bool) {
-	c, ok := clients.Get(name)
+	cmutex.RLock()
+	defer cmutex.RUnlock()
+	c, ok := clients[name]
 	if !ok { return nil, false }
-	return c.(*Client), true
+	return c, true
 }
 
 func RemoveClient(name string){
-	clients.Delete(name)
+	cmutex.Lock()
+	defer cmutex.Unlock()
+	delete(clients, name)
 }
 
 
