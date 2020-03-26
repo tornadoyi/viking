@@ -29,4 +29,4 @@ func (h *Result) StringMap () (map[string]string, error) { return StringMap(h.re
 func (h *Result) Strings () ([]string, error) { return Strings(h.reply, h.error) }
 func (h *Result) Uint64 () (uint64, error) { return Uint64(h.reply, h.error) }
 func (h *Result) Values () ([]interface{}, error) { return Values(h.reply, h.error) }
-
+func (h *Result) Interface () (interface{}, error) { return h.reply, h.error }
