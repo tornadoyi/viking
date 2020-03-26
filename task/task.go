@@ -71,8 +71,13 @@ func (h *Task) Start(){
 			}, "\n"))
 			 */
 		})
-		result := h.function.Call(h.arguments)
-		h.result = result
+		vres := h.function.Call(h.arguments)
+
+		if len(vres) == 1 { h.result = vres[0].Interface() } else {
+			res := make([]interface{}, 0, len(vres))
+			for _, v := range vres { res = append(res, v) }
+			h.result = res
+		}
 	}()
 }
 

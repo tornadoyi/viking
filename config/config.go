@@ -149,6 +149,7 @@ func addTimer(delay time.Duration) {
 
 		// update config
 		t := task.Create(updateConfigs, cfgs)
+		t.Start()
 		t.Wait()
 		if t.Error() != nil {
 			log.Error(t.Error())
