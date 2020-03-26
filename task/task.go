@@ -11,10 +11,19 @@ import (
 )
 
 const (
-	INIT		int = iota
-	RUNNING
-	FINISH
+	Init		int = iota
+	Running
+	Finished
+	Canceled
 )
+
+
+
+func Create(f interface{}, args... interface{}) *Task {
+	wg := &sync.WaitGroup{}
+	return createTask(f, wg, args...)
+}
+
 
 
 type Task struct {
@@ -23,46 +32,85 @@ type Task struct {
 	state				int
 	result				interface{}
 	error				error
-	wg					sync.WaitGroup
 	stack				runtime.StackInfo
+	wg					*sync.WaitGroup
+	mutex				sync.RWMutex
 }
 
-func (h *Task) State() int { return h.state }
+func (h *Task) State() int {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.state
+}
 
-func (h *Task) Error() error { return h.error }
+func (h *Task) Error() error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.error
+}
 
-func (h *Task) Result() interface{} { return h.result }
+func (h *Task) Result() interface{} {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.result
+}
 
-func (h *Task) Finish() bool { return h.state == FINISH}
+func (h *Task) Finished() bool {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.state == Finished
+}
+
+func (h *Task) Canceled() bool {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.state == Canceled
+}
+
+func (h *Task) Terminated() bool {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.state == Finished || h.state == Canceled
+}
+
+
 
 func (h *Task) StateDesc() string {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
 	switch h.state {
-	case INIT: return "Init"
-	case RUNNING: return "Running"
-	case FINISH: return "Finish"
+	case Init: return "Init"
+	case Running: return "Running"
+	case Finished: return "Finished"
+	case Canceled: return "Canceled"
 	default: return "Invalid"
 	}
 }
 
-func Create(f interface{}, args... interface{}) *Task {
-	if f == nil { panic(errors.New("Can not create task with nil function")) }
-	vf := reflect.ValueOf(f)
-	if vf.Kind() != reflect.Func { panic(errors.New(fmt.Sprintf("Can not create task with invalid function type %v", vf.Kind()))) }
-	vargs := make([]reflect.Value, len(args))
-	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
-	return &Task{vf, vargs,INIT, nil, nil, sync.WaitGroup{}, runtime.Trace(3)}
-}
-
 func (h *Task) Start(){
-	if h.state != INIT { panic(errors.New(fmt.Sprintf("Task can not start, current state is %v", h.StateDesc()))) }
-	h.state = RUNNING
-	h.wg.Add(1)
+	var stateErr error = nil
+	h.mutex.Lock()
+	if h.state != Init {
+		stateErr = fmt.Errorf("Task can not start, current state is %v", h.StateDesc())
+	} else {
+		h.state = Running
+		h.wg.Add(1)
+	}
+	h.mutex.Unlock()
+	if stateErr != nil { panic(stateErr) }
+
 	go func() {
 		defer func(){
-			h.wg.Done()
-			h.state = FINISH
+			h.mutex.Lock()
+			if h.state == Running {
+				h.wg.Done()
+				h.state = Finished
+			}
+			h.mutex.Unlock()
 		}()
 		defer CatchCallback(func(info *PanicInfo){
+			h.mutex.Lock()
+			defer h.mutex.Unlock()
 			h.error = info.Error()
 			/*
 			log.Critical(strings.Join([]string{
@@ -71,32 +119,73 @@ func (h *Task) Start(){
 			}, "\n"))
 			 */
 		})
-		vres := h.function.Call(h.arguments)
 
-		if len(vres) == 1 { h.result = vres[0].Interface() } else {
+		// collect results
+		vres := h.function.Call(h.arguments)
+		var result interface{}
+		if len(vres) == 1 { result = vres[0].Interface() } else {
 			res := make([]interface{}, 0, len(vres))
 			for _, v := range vres { res = append(res, v) }
-			h.result = res
+			result = res
 		}
+
+		// save result
+		h.mutex.Lock()
+		if h.state != Canceled { h.result = result }
+		h.mutex.Unlock()
 	}()
 }
 
+func (h *Task) Cancel(){
+	switch h.State() {
+	case Init:
+		h.mutex.Lock()
+		h.state = Canceled
+		h.mutex.Unlock()
+		return
+	case Canceled, Finished: return
+	}
+
+	h.mutex.Lock()
+	h.wg.Done()
+	h.state = Canceled
+	h.mutex.Unlock()
+}
+
+
+
 func (h *Task) Wait(){
-	if h.state == INIT { panic(errors.New("Can't wait for a task that hasn't started")) }
-	if h.state == FINISH { return }
+	switch h.State() {
+	case Init: panic(errors.New("Can't wait for a task that hasn't started"))
+	case Finished: return
+	}
 	h.wg.Wait()
 }
 
-func (h *Task) WaitTimeout(timeout time.Duration) bool{
+func (h *Task) WaitTimeout(timeout time.Duration) {
 	c := make(chan struct{})
 	go func() {
 		defer close(c)
 		h.Wait()
 	}()
 	select {
-	case <-c:
-		return true
+	case <-c:  return
 	case <-time.After(timeout):
-		return false
+		h.Cancel()
+		return
 	}
+}
+
+
+
+
+
+
+func createTask(f interface{}, wg *sync.WaitGroup, args... interface{}) *Task {
+	if f == nil { panic(errors.New("Can not create task with nil function")) }
+	vf := reflect.ValueOf(f)
+	if vf.Kind() != reflect.Func { panic(fmt.Errorf("Can not create task with invalid function type %v", vf.Kind())) }
+	vargs := make([]reflect.Value, len(args))
+	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
+	return &Task{vf, vargs,Init, nil, nil, runtime.Trace(3),wg, sync.RWMutex{}}
 }

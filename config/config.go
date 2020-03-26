@@ -107,7 +107,7 @@ func updateConfigs(configs []*Config) []error{
 		list, _ := priorConfigs[p]
 		if len(list) == 0 { continue }
 
-		ts := make(task.TaskGroup, 0, len(list))
+		ts := task.CreateGroup()
 		for _, c := range list{
 			ts.Add(func(c *Config) {
 				data := c.Execute()
