@@ -8,15 +8,19 @@ import (
 	"github.com/tornadoyi/viking/task"
 	"net/url"
 	"strings"
+	"sync"
 )
 
 
 var (
 	servers 	=  		map[string]*Server{}
+	mutex		=		sync.RWMutex{}
 )
 
 
 func RegisterServer(cfg *_consul.Config, regCfg *AgentServiceRegistrationConfig) error {
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	// check
 	if regCfg == nil { return fmt.Errorf("Empty registration config")}
