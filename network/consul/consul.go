@@ -9,30 +9,66 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 )
 
 
 var (
-	servers 	=  		map[string]*Server{}
+	clients 	=  		map[string]*Client{}
 	mutex		=		sync.RWMutex{}
 )
 
 
-func RegisterServer(cfg *_consul.Config, regCfg *AgentServiceRegistrationConfig) error {
+func CreateClient(name string, cfg *_consul.Config) (*Client, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	// check
-	if regCfg == nil { return fmt.Errorf("Empty registration config")}
-	registration := regCfg.AgentServiceRegistration()
-	if _, ok := servers[registration.Name]; ok { return fmt.Errorf("Repeated registration %v", registration.Name)}
+	if _, ok := clients[name]; ok { return nil, fmt.Errorf("Repeated client %v", name)}
 
 	// create client
-	client, err := _consul.NewClient(cfg)
-	if err != nil { return err}
+	c, err := _consul.NewClient(cfg)
+	if err != nil { return nil, err}
+
+	// save
+	client := &Client{name, c, nil, nil,
+		make(map[string]*_consul.AgentService), &sync.RWMutex{}}
+	clients[name] = client
+	return client, nil
+}
+
+
+func GetClient(name string) (*Client, bool) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	c, ok := clients[name]
+	return c, ok
+}
+
+
+
+
+type Client struct {
+	name				string
+	client				*_consul.Client
+	registration		*_consul.AgentServiceRegistration
+	timer				*time.Timer
+	services			map[string]*AgentService
+	mutex				*sync.RWMutex
+}
+
+func (h *Client) RegisterServer(regCfg *AgentServiceRegistrationConfig) error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	// check
+	if h.registration != nil { return fmt.Errorf("Repeated server register by client %v", h.name) }
+	if regCfg == nil { return fmt.Errorf("Empty registration config")}
+	registration := regCfg.AgentServiceRegistration()
+	h.registration = registration
 
 	// register
-	err = client.Agent().ServiceRegister(registration)
+	err := h.client.Agent().ServiceRegister(registration)
 	if err != nil { return err }
 
 	// start health checking server
@@ -52,14 +88,34 @@ func RegisterServer(cfg *_consul.Config, regCfg *AgentServiceRegistrationConfig)
 	})
 	t.Start()
 
-	// save
-	servers[registration.Name] = &Server{client, registration}
 	return nil
 }
 
 
+func (h *Client) SetFetchInterval(interval time.Duration) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 
-type Server struct {
-	client				*_consul.Client
-	registration		*_consul.AgentServiceRegistration
+	if h.timer != nil { h.timer.Stop() }
+	h.timer = time.AfterFunc(interval, func() {
+		h.mutex.Lock()
+		defer h.mutex.Unlock()
+		defer h.timer.Reset(interval)
+		services, err := h.client.Agent().Services()
+		if err != nil { log.Error(err); return }
+		h.services = services
+	})
 }
+
+func (h *Client) FetchServices() (map[string]*AgentService, error) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	services, err := h.client.Agent().Services()
+	if err != nil { return nil, err}
+	h.services = services
+	return services, nil
+}
+
+
+
+type AgentService = _consul.AgentService
