@@ -14,7 +14,7 @@ var (
 )
 
 
-func RegisterServer(regCfg *AgentServiceRegistrationConfig) error {
+func RegisterServer(cfg *_consul.Config, regCfg *AgentServiceRegistrationConfig) error {
 
 	// check
 	if regCfg == nil { return fmt.Errorf("Empty registration config")}
@@ -22,7 +22,7 @@ func RegisterServer(regCfg *AgentServiceRegistrationConfig) error {
 	if _, ok := servers[registration.Name]; ok { return fmt.Errorf("Repeated registration %v", registration.Name)}
 
 	// create client
-	client, err := _consul.NewClient(_consul.DefaultConfig())
+	client, err := _consul.NewClient(cfg)
 	if err != nil { return err}
 
 	// register

@@ -2,7 +2,35 @@ package consul
 
 import (
 	_consul "github.com/hashicorp/consul/api"
+	"time"
 )
+
+
+
+type ConnectConfig struct {
+	Address 				*string									`yaml:"address"`
+	Scheme 					*string									`yaml:"scheme"`
+	Datacenter 				*string									`yaml:"data_center"`
+	WaitTime 				*string									`yaml:"wait_time"`
+	Token 					*string									`yaml:"token"`
+	TokenFile 				*string									`yaml:"token_file"`
+	Namespace 				*string									`yaml:"namespace"`
+}
+
+func (h *ConnectConfig) Config() *_consul.Config{
+	c := _consul.DefaultConfig()
+	if h.Address != nil { c.Address = *h.Address }
+	if h.Scheme != nil { c.Scheme = *h.Scheme }
+	if h.Datacenter != nil { c.Datacenter = *h.Datacenter }
+	if h.WaitTime != nil { c.WaitTime, _ = time.ParseDuration(*h.WaitTime)}
+	if h.Token != nil { c.Token = *h.Token }
+	if h.TokenFile != nil { c.TokenFile = *h.TokenFile }
+	if h.Namespace != nil { c.Namespace = *h.Namespace }
+
+	return c
+}
+
+
 
 type AgentServiceRegistrationConfig struct {
 	Kind				*_consul.ServiceKind               		`yaml:"kind"`
