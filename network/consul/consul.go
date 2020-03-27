@@ -6,6 +6,7 @@ import (
 	"github.com/tornadoyi/viking/http"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/task"
+	"strings"
 )
 
 
@@ -30,11 +31,15 @@ func RegisterServer(cfg *_consul.Config, regCfg *AgentServiceRegistrationConfig)
 	if err != nil { return err }
 
 	// start health checking server
+	s := strings.Split(registration.Check.HTTP, ":")
+	if len(s) < 2 { return fmt.Errorf("Invalid address format for http heath checking, address: %v",registration.Check.HTTP ) }
+	address := strings.Split(s[1],"/")[0]
+
 	checkHandler := func (ctx *http.RequestCtx){
 		fmt.Fprintf(ctx, "check")
 	}
 	t := task.Create(func() {
-		if err := http.ListenAndServe(registration.Check.HTTP, checkHandler); err != nil {
+		if err := http.ListenAndServe(address, checkHandler); err != nil {
 			log.Error(err)
 		}
 	})
