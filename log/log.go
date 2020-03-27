@@ -9,13 +9,13 @@ import (
 )
 
 var (
-	loggers = make(map[string]Logger)
+	loggers = make(map[string]*Logger)
 	defaultLogger = createDefaultLogger()
 	mutex sync.Mutex
 )
 
 
-func GetLogger(name string) Logger{
+func GetLogger(name string) *Logger{
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -24,14 +24,14 @@ func GetLogger(name string) Logger{
 	return log
 }
 
-func SetDefaultLogger(log Logger) {
+func SetDefaultLogger(log *Logger) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	defaultLogger = log
 }
 
 
-func createDefaultLogger() Logger{
+func createDefaultLogger() *Logger{
 	log := CreateLogger("__default__")
 	lw := l4g.NewConsoleLogWriter()
 	lw.SetFormat("[%D %T] [%L] %M")
@@ -39,19 +39,20 @@ func createDefaultLogger() Logger{
 	return log
 }
 
-func CreateLogger(name string) Logger{
+func CreateLogger(name string) *Logger{
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	log := make(Logger)
 	if _, ok := loggers[name]; ok { panic(errors.New(fmt.Sprintf("Repeated logger name %v", name))) }
-	loggers[name] = log
+	loggers[name] = &log
 
 	// destructor
 	runtime.SetFinalizer(&log, func (log *Logger){
+		fmt.Println("close log ", name)
 		log.Close()
 	})
-	return log
+	return &log
 }
 
 
