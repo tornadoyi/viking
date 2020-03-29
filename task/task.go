@@ -3,9 +3,7 @@ package task
 import (
 	"errors"
 	"fmt"
-	. "github.com/tornadoyi/viking/goplus/core"
 	"github.com/tornadoyi/viking/goplus/runtime"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -18,23 +16,18 @@ const (
 )
 
 
-
-func Create(f interface{}, args... interface{}) *Task {
-	wg := &sync.WaitGroup{}
-	return createTask(f, wg, args...)
-}
-
-
-
 type Task struct {
-	function			reflect.Value
-	arguments			[]reflect.Value
+	function			*runtime.JITFunc
 	state				int
 	result				interface{}
 	error				error
 	stack				runtime.StackInfo
 	wg					*sync.WaitGroup
 	mutex				sync.RWMutex
+}
+
+func NewTask(f interface{}, args... interface{}) *Task {
+	return newTask(&sync.WaitGroup{}, f, args...)
 }
 
 func (h *Task) State() int {
@@ -108,30 +101,16 @@ func (h *Task) Start(){
 			}
 			h.mutex.Unlock()
 		}()
-		defer CatchCallback(func(info *PanicInfo){
-			h.mutex.Lock()
-			defer h.mutex.Unlock()
-			h.error = info.Error()
-			/*
-			log.Critical(strings.Join([]string{
-				"A task error occurred as below",
-				fmt.Sprintf("%v", h.stack),
-			}, "\n"))
-			 */
-		})
 
 		// collect results
-		vres := h.function.Call(h.arguments)
-		var result interface{}
-		if len(vres) == 1 { result = vres[0].Interface() } else {
-			res := make([]interface{}, 0, len(vres))
-			for _, v := range vres { res = append(res, v) }
-			result = res
-		}
+		result, err := h.function.Call()
 
 		// save result
 		h.mutex.Lock()
-		if h.state != Canceled { h.result = result }
+		if h.state != Canceled {
+			h.result = result
+			h.error = err
+		}
 		h.mutex.Unlock()
 	}()
 }
@@ -178,14 +157,14 @@ func (h *Task) WaitTimeout(timeout time.Duration) {
 
 
 
-
-
-
-func createTask(f interface{}, wg *sync.WaitGroup, args... interface{}) *Task {
-	if f == nil { panic(errors.New("Can not create task with nil function")) }
-	vf := reflect.ValueOf(f)
-	if vf.Kind() != reflect.Func { panic(fmt.Errorf("Can not create task with invalid function type %v", vf.Kind())) }
-	vargs := make([]reflect.Value, len(args))
-	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
-	return &Task{vf, vargs,Init, nil, nil, runtime.Trace(3),wg, sync.RWMutex{}}
+func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
+	return &Task{
+		function: runtime.NewJITFunc(f, args...),
+		state:    Init,
+		result:   nil,
+		error:    nil,
+		stack:    runtime.Trace(2),
+		wg:       wg,
+		mutex:    sync.RWMutex{},
+	}
 }

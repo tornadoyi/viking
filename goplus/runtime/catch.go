@@ -1,9 +1,7 @@
-package core
+package runtime
 
 import (
-	"errors"
 	"fmt"
-	"github.com/tornadoyi/viking/goplus/runtime"
 	"github.com/tornadoyi/viking/log"
 	"strings"
 )
@@ -23,18 +21,18 @@ var (
 )
 
 type PanicInfo struct {
-	error		error
-	stack		runtime.StackInfo
+	error error
+	stack StackInfo
 }
 
 func (h *PanicInfo) Error() error { return h.error}
 
-func (h *PanicInfo) Stack() runtime.StackInfo { return h.stack}
+func (h *PanicInfo) Stack() StackInfo { return h.stack}
 
 func Catch(){
 	err := recover()
 	if err == nil { return }
-	info := &PanicInfo{errors.New(fmt.Sprintf("%v", err)), runtime.Trace(4)}
+	info := &PanicInfo{fmt.Errorf("%v", err), Trace(3)}
 	if catchErrCallback != nil { catchErrCallback(info) }
 }
 
@@ -42,7 +40,7 @@ func Catch(){
 func CatchCallback(cb func(*PanicInfo)) {
 	err := recover()
 	if err == nil { return }
-	info := &PanicInfo{errors.New(fmt.Sprintf("%v", err)), runtime.Trace(4)}
+	info := &PanicInfo{fmt.Errorf("%v", err), Trace(3)}
 	if catchErrCallback != nil { catchErrCallback(info) }
 	if cb != nil { cb(info) }
 }

@@ -28,9 +28,9 @@ func IsFile(path string) bool {
 
 func ExpandUser(path string) string{
 	if len(path) == 0 { return path }
-	if !strings.HasPrefix(path, "~/") { return path}
+	if !strings.HasPrefix(path, "~") { return path}
 	usr, _ := user.Current()
-	return _filepath.Join(usr.HomeDir, path[2:])
+	return _filepath.Join(usr.HomeDir, path[1:])
 }
 
 

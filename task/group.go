@@ -5,14 +5,13 @@ import (
 	"time"
 )
 
-
-func CreateGroup() *TaskGroup{ return &TaskGroup{make([]*Task, 0), &sync.WaitGroup{}} }
-
-
 type TaskGroup struct {
 	tasks			[]*Task
 	wg				*sync.WaitGroup
 }
+
+func NewGroup() *TaskGroup{ return &TaskGroup{make([]*Task, 0), &sync.WaitGroup{}} }
+
 
 func (h *TaskGroup) Terminated() bool{
 	for _, t := range h.tasks{
@@ -32,7 +31,7 @@ func (h *TaskGroup) Errors() []error {
 }
 
 func (h *TaskGroup) Add(f interface{}, args... interface{}) *Task{
-	t := createTask(f, h.wg, args...)
+	t := newTask(h.wg, f, args...)
 	h.tasks = append(h.tasks, t)
 	return t
 }

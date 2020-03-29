@@ -21,7 +21,7 @@ type StackInfo []uintptr
 
 func Trace(skip int) StackInfo{
 	var pcs [MAX_STACK_DEPTH]uintptr
-	n := runtime.Callers(skip, pcs[:])
+	n := runtime.Callers(1+skip, pcs[:])
 	var s StackInfo = pcs[0:n]
 	return s
 }

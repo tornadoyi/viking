@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/tornadoyi/viking/goplus/runtime"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/task"
 	"reflect"
@@ -18,59 +19,40 @@ var (
 )
 
 
-type Config struct {
-	name			string
-	executor		reflect.Value
-	arguments		[]reflect.Value
-	priority		int
-	schedule		time.Duration
-	data			atomic.Value
-
-}
-
-func (h *Config) Name() string{ return h.name }
-
-func (h *Config) Priority() int { return h.priority }
-
-func (h *Config) Schedule() time.Duration{ return h.schedule }
-
-func (h *Config) Execute() interface{}{ return h.executor.Call(h.arguments)[0].Interface() }
-
-func (h* Config) SetPriority(priority int){ h.priority = priority }
-
-func (h* Config) SetSchedule(delay time.Duration){
-	h.schedule = delay
-	addTimer(delay)
-}
+const (
+	UserDefinedConfig			= "UserDefined"
+	RedisConfig					= "RedisConfig"
+	FileSystemConfig			= "FileSystemConfig"
+)
 
 
-
-func Add(name string, f interface{}, args... interface{}) (*Config, error) {
+func AddConfig(name string, f interface{}, args... interface{}) (*Config, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	_, ok := configs[name]
 	if ok { return nil, fmt.Errorf("Repeated config %k", name)}
 	vargs := make([]reflect.Value, len(args))
 	for i, a := range (args){ vargs[i] = reflect.ValueOf(a) }
-	config := &Config{
-		name,
-		reflect.ValueOf(f),
-		vargs,
-		1,
-		0,
-		atomic.Value{},
-	}
+	config := NewConfig(name, f, args...)
 	configs[name] = config
 	return config, nil
 }
 
+func AddParser(parser IParser) (*Config, error) {
+	cfg, err := AddConfig(parser.Name(), parser.ParseFunc(), parser.Arguments()...)
+	if err != nil { return nil, err}
+	err = cfg.AddFunc("Parser", func() IParser { return parser })
+	if err != nil { return nil, err}
+	return cfg, nil
+}
 
-func GetContent(name string) (interface{}, bool) {
+
+func GetConfigData(name string) (interface{}, bool) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	c, ok := configs[name]
 	if !ok { return nil, false }
-	return c.data.Load(), true
+	return c.Data(), true
 }
 
 
@@ -107,7 +89,7 @@ func updateConfigs(configs []*Config) []error{
 		list, _ := priorConfigs[p]
 		if len(list) == 0 { continue }
 
-		ts := task.CreateGroup()
+		ts := task.NewGroup()
 		for _, c := range list{
 			ts.Add(func(c *Config) {
 				data := c.Execute()
@@ -148,7 +130,7 @@ func addTimer(delay time.Duration) {
 		if len(cfgs) == 0 || timer == nil { return }
 
 		// update config
-		t := task.Create(updateConfigs, cfgs)
+		t := task.NewTask(updateConfigs, cfgs)
 		t.Start()
 		t.Wait()
 		if t.Error() != nil {
@@ -162,3 +144,79 @@ func addTimer(delay time.Duration) {
 		timer.Reset(delay)
 	})
 }
+
+
+
+
+
+type Config struct {
+	*runtime.JIT
+	name			string
+	executor		*runtime.JITFunc
+	priority		int
+	schedule		time.Duration
+	data			atomic.Value
+}
+
+func NewConfig(name string, f interface{}, args... interface{}) *Config {
+	return &Config{
+		JIT:	  runtime.NewJIT(),
+		name:     name,
+		executor: runtime.NewJITFunc(f, args...),
+		data:     atomic.Value{},
+	}
+}
+
+func (h *Config) Name() string{ return h.name }
+
+func (h *Config) Priority() int { return h.priority }
+
+func (h *Config) Schedule() time.Duration{ return h.schedule }
+
+func (h *Config) Execute() interface{} {
+	result, err := h.executor.Call()
+	if err != nil { panic(err) }
+	return result
+}
+
+func (h* Config) SetPriority(priority int){ h.priority = priority }
+
+func (h *Config) Data() interface{} { return h.data.Load() }
+
+func (h* Config) SetSchedule(delay time.Duration){
+	h.schedule = delay
+	addTimer(delay)
+}
+
+
+
+
+type IParser interface {
+	Name()					string
+	DefaultConfig()			interface{}
+	ParseFunc()				interface{}
+	Arguments()				[]interface{}
+}
+
+
+type BaseParser struct {
+	name					string
+	defaultConfig			interface{}
+	parseFunc				interface{}
+	arguments				[]interface{}
+}
+
+
+func NewBaseParser(name string, defaultConfig, parseFunc interface{}, args... interface{}) *BaseParser {
+	return &BaseParser{
+		name:          name,
+		defaultConfig: defaultConfig,
+		parseFunc:     parseFunc,
+		arguments:     args,
+	}
+}
+
+func (h *BaseParser) Name() string { return h.name}
+func (h *BaseParser) DefaultConfig() interface{} { return h.defaultConfig}
+func (h *BaseParser) ParseFunc() interface{} { return h.parseFunc }
+func (h *BaseParser) Arguments() []interface{} { return h.arguments }

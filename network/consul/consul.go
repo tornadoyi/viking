@@ -81,7 +81,7 @@ func (h *Client) RegisterServer(regCfg *AgentServiceRegistrationConfig) error {
 	checkHandler := func (ctx *http.RequestCtx){
 		fmt.Fprintf(ctx, "check")
 	}
-	t := task.Create(func() {
+	t := task.NewTask(func() {
 		if err := http.ListenAndServe(address, checkHandler); err != nil {
 			log.Error(err)
 		}
