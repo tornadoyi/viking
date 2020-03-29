@@ -6,7 +6,7 @@
 ```bash
 go get -u github.com/toolkits/file
 go get -u gopkg.in/yaml.v2
-go get -u gopkg.in/alecthomas/kingpin.v2
+go get -u github.com/alecthomas/kong
 go get -u github.com/gomodule/redigo/redis
 go get -u github.com/hashicorp/consul/api
 go get -u github.com/valyala/fasthttp
