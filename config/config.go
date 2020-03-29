@@ -19,12 +19,6 @@ var (
 )
 
 
-const (
-	UserDefinedConfig			= "UserDefined"
-	RedisConfig					= "RedisConfig"
-	FileSystemConfig			= "FileSystemConfig"
-)
-
 
 func AddConfig(name string, f interface{}, args... interface{}) (*Config, error) {
 	mutex.Lock()
@@ -53,6 +47,14 @@ func GetConfigData(name string) (interface{}, bool) {
 	c, ok := configs[name]
 	if !ok { return nil, false }
 	return c.Data(), true
+}
+
+func Configs() []*Config {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	cfgs := make([]*Config, 0, len(configs))
+	for _, cfg := range configs { cfgs = append(cfgs, cfg) }
+	return cfgs
 }
 
 
