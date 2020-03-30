@@ -51,6 +51,15 @@ func (*Resolver) Close() {}
 
 
 // export
+type IResolver	= _resolver.Resolver
+type Target	= _resolver.Target
+type ClientConn	= _resolver.ClientConn
+type ResolveNowOptions	= _resolver.ResolveNowOptions
+type BuildOptions	= _resolver.BuildOptions
+type Address	= _resolver.Address
+type State	= _resolver.State
+
+
 var Register = _resolver.Register
 var Get = _resolver.Get
 var SetDefaultScheme = _resolver.SetDefaultScheme
