@@ -1,9 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"github.com/tornadoyi/viking/goplus/runtime"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/redis"
+	"strings"
 )
 
 
@@ -34,6 +36,12 @@ func NewRedisParser(name, pool, command string, cmdArgs []interface{}, defaultCo
 func (h *RedisParser) Pool() string { return h.pool}
 func (h *RedisParser) Command() string { return h.command}
 func (h *RedisParser) CmdArgs() []interface{} { return h.cmdArgs}
+func (h *RedisParser) CmdWithArgDesc() string {
+	cmds := make([]string, 0, len(h.cmdArgs)+1)
+	cmds = append(cmds, h.command)
+	for _, arg := range h.cmdArgs { cmds = append(cmds, fmt.Sprintf("%v", arg)) }
+	return strings.Join(cmds, " ")
+}
 
 func (h *RedisParser) parse() interface{} {
 	content := h.defaultConfig

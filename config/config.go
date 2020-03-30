@@ -41,6 +41,14 @@ func AddParser(parser IParser) (*Config, error) {
 }
 
 
+func GetConfig(name string) (*Config, bool) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	c, ok := configs[name]
+	return c, ok
+}
+
+
 func GetConfigData(name string) (interface{}, bool) {
 	mutex.RLock()
 	defer mutex.RUnlock()
