@@ -5,6 +5,7 @@ import (
 	_consul "github.com/hashicorp/consul/api"
 	"github.com/tornadoyi/viking/log"
 	"github.com/tornadoyi/viking/network/consul/config"
+	"github.com/tornadoyi/viking/network/consul/resolver"
 	"sync"
 	"time"
 )
@@ -14,8 +15,7 @@ type Agent struct {
 	*_consul.Agent
 	client	*Client
 	timer				*time.Timer
-	focus				map[string]bool
-	services			map[string][]*AgentService
+	services			map[string]*AgentService
 	mutex				*sync.RWMutex
 }
 
@@ -23,14 +23,13 @@ func NewAgent(client *Client) *Agent {
 	return &Agent{
 		Agent:    client.client.Agent(),
 		client:   client,
-		focus:    make(map[string]bool),
-		services: make(map[string][]*AgentService),
+		services: make(map[string]*AgentService),
 		mutex:    &sync.RWMutex{},
 	}
 }
 
 
-func (h *Agent) Services() map[string][]*AgentService {
+func (h *Agent) Services() map[string]*AgentService {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	return h.services
@@ -64,40 +63,18 @@ func (h *Agent) SetInterval(interval time.Duration) {
 		defer h.timer.Reset(interval)
 		services, err := h.Agent.Services()
 		if err != nil { log.Error(err); return }
-		h.updateServices(services)
+		h.services = services
 	})
 }
 
 
-func (h *Agent) RegisterResolver(scheme string, services []string,  interval time.Duration) error {
+func (h *Agent) RegisterResolver(scheme string, interval time.Duration, filters... resolver.IAgentServiceFilter) error {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
-	// add service to focus
-	for _, s := range services{
-		h.focus[s] = true
-	}
-
 	// register
-	return RegisterAgentResolver(h, scheme, services, interval)
+	return resolver.RegisterAgentResolver(h, scheme, interval, filters...)
 }
-
-
-
-func (h *Agent) updateServices(services map[string]*AgentService) {
-	focusServices := make(map[string][]*AgentService)
-	for _, s := range services {
-		if _, ok := h.focus[s.Service]; !ok { continue }
-		svrs, _ := focusServices[s.Service]
-		focusServices[s.Service] = append(svrs, s)
-	}
-	h.services = focusServices
-}
-
-
-
-
-
 
 
 
