@@ -2,7 +2,6 @@ package redis
 
 import (
 	"fmt"
-	"github.com/tornadoyi/viking/redis"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
@@ -13,18 +12,18 @@ const (
 	name = "test"
 )
 
-func skip() bool{ return len(network) == 0 || len(address) == 0 }
+func CheckSkip(t *testing.T) { if len(network) == 0 || len(address) == 0 { t.Skip("Set redis network and port address activate redis test") } }
 
 
 func TestRedisPoolCreator(t *testing.T) {
-	if(skip()) {t.Skip("Set redis network and port address activate redis test")}
+	CheckSkip(t)
 
 	type RedisConfig struct{
-		Name				string					`yaml:"name"`
-		Network				string					`yaml:"network"`
-		Host				string					`yaml:"host"`
-		PoolConfig			*redis.PoolConfig		`yaml:"pool"`
-		DialConfig			*redis.DialConfig		`yaml:"dial"`
+		Name				string        `yaml:"name"`
+		Network				string     `yaml:"network"`
+		Host				string        `yaml:"host"`
+		PoolConfig			*PoolConfig `yaml:"pool"`
+		DialConfig			*DialConfig `yaml:"dial"`
 	}
 
 	cfgContent := fmt.Sprintf(`
@@ -46,14 +45,15 @@ dial:
 
 	cfg := &RedisConfig{}
 	if err := yaml.Unmarshal([]byte(cfgContent), cfg); err != nil { t.Error(err) }
-	_, err := redis.CreatePool(cfg.Name, cfg.Network, cfg.Host, cfg.PoolConfig.PoolOptions(), cfg.DialConfig.DialOptions())
+	_, err := CreatePool(cfg.Name, cfg.Network, cfg.Host, cfg.PoolConfig.PoolOptions(), cfg.DialConfig.DialOptions())
 	//_, err := redis.CreatePool(name, network, address, nil, nil)
 	if err != nil { t.Error(err) }
 }
 
 
 func TestRedisSet(t *testing.T) {
-	pool,ok := redis.GetPool(name)
+	CheckSkip(t)
+	pool,ok := GetPool(name)
 	if !ok { t.Error(fmt.Sprintf("Can not get redis pool %v", name)) }
 
 	r := pool.Do("SET", "test", 123)
