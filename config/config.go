@@ -15,7 +15,13 @@ import (
 var (
 	configs 		= map[string]*Config{}
 	timers			= map[time.Duration]*time.Timer{}
+
+	// event
+	onLoadStart	 	= (*runtime.JITFunc)(nil)
+	onLoadEnd	 	= (*runtime.JITFunc)(nil)
+
 	mutex			= sync.RWMutex{}
+
 )
 
 
@@ -66,6 +72,21 @@ func Configs() []*Config {
 }
 
 
+
+func RegisterLoadStartEvent(f func(*Config)) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	onLoadStart = runtime.NewJITFunc(f)
+}
+
+func RegisterLoadEndEvent(f func(*Config)) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	onLoadEnd = runtime.NewJITFunc(f)
+}
+
+
+
 func Start() []error{
 	cfgs := make([]*Config, 0)
 	mutex.RLock()
@@ -102,8 +123,10 @@ func updateConfigs(configs []*Config) []error{
 		ts := task.NewGroup()
 		for _, c := range list{
 			ts.Add(func(c *Config) {
+				if onLoadStart != nil { onLoadStart.Call(c) }
 				data := c.Execute()
 				c.data.Store(data)
+				if onLoadEnd != nil { onLoadEnd.Call(c) }
 			}, c)
 		}
 		ts.Start()
@@ -161,11 +184,13 @@ func addTimer(delay time.Duration) {
 
 type Config struct {
 	*runtime.JIT
-	name			string
-	executor		*runtime.JITFunc
-	priority		int
-	schedule		time.Duration
-	data			atomic.Value
+	name									string
+	executor								*runtime.JITFunc
+	priority								int
+	schedule								time.Duration
+	data									atomic.Value
+	lastExecuteStartTime					int64
+	lastExecuteEndTime						int64
 }
 
 func NewConfig(name string, f interface{}, args... interface{}) *Config {
@@ -182,6 +207,10 @@ func (h *Config) Name() string{ return h.name }
 func (h *Config) Priority() int { return h.priority }
 
 func (h *Config) Schedule() time.Duration{ return h.schedule }
+
+func (h *Config) LastExecuteStartTime() int64 { return h.lastExecuteStartTime}
+
+func (h *Config) LastExecuteEndTime() int64 { return h.lastExecuteEndTime }
 
 func (h *Config) Execute() interface{} {
 	result, err := h.executor.Call()
