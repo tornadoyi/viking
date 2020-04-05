@@ -120,15 +120,17 @@ func (h *Task) Cancel(){
 	case Init:
 		h.mutex.Lock()
 		h.state = Canceled
+		h.error = fmt.Errorf("Positive cancel")
 		h.mutex.Unlock()
 		return
+	case Running:
+		h.mutex.Lock()
+		h.state = Canceled
+		h.error = fmt.Errorf("Positive cancel")
+		h.wg.Done()
+		h.mutex.Unlock()
 	case Canceled, Finished: return
 	}
-
-	h.mutex.Lock()
-	h.wg.Done()
-	h.state = Canceled
-	h.mutex.Unlock()
 }
 
 
