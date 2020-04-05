@@ -213,9 +213,9 @@ func (h *Config) LastExecuteStartTime() int64 { return h.lastExecuteStartTime}
 func (h *Config) LastExecuteEndTime() int64 { return h.lastExecuteEndTime }
 
 func (h *Config) Execute() interface{} {
-	h.lastExecuteStartTime = time.Now().Unix()
+	h.lastExecuteStartTime = time.Now().UnixNano()
 	result, err := h.executor.Call()
-	h.lastExecuteEndTime = time.Now().Unix()
+	h.lastExecuteEndTime = time.Now().UnixNano()
 	if err != nil { panic(err) }
 	return result
 }
