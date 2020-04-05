@@ -10,6 +10,7 @@ go get -u github.com/alecthomas/kong
 go get -u github.com/gomodule/redigo/redis
 go get -u github.com/hashicorp/consul/api
 go get -u github.com/valyala/fasthttp
+go get -u github.com/buaazp/fasthttprouter
 ```
 
 ## Quick Install
