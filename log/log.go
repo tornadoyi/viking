@@ -1,80 +1,122 @@
+
+
 package log
 
 import (
-	"errors"
 	"fmt"
-	"runtime"
+	"gopkg.in/yaml.v2"
 	"sync"
-	l4g "github.com/tornadoyi/viking/log/log4go"
 )
+
 
 var (
+	mutex sync.RWMutex
 	loggers = make(map[string]*Logger)
-	defaultLogger = createDefaultLogger()
-	mutex sync.Mutex
+	defaultLogger = (*Logger)(nil)
+	_ = createDefaultLogger()
 )
 
 
-func GetLogger(name string) *Logger{
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log, ok := loggers[name]
-	if !ok { return nil}
-	return log
-}
-
-func SetDefaultLogger(log *Logger) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	defaultLogger = log
+func GetLogger(name string) (*Logger, bool){
+	mutex.RLock()
+	defer mutex.RUnlock()
+	l, ok := loggers[name]
+	return l, ok
 }
 
 
 func createDefaultLogger() *Logger{
-	log := CreateLogger("__default__")
-	lw := l4g.NewConsoleLogWriter()
-	lw.SetFormat("[%D %T] [%L] %M")
-	log.AddFilter("stdout", l4g.FINEST, lw)
-	return log
+	const defaultLoggerConfig = `
+level: debug
+disableCaller: true
+disableStacktrace: true
+encoding: console
+encoderConfig:
+  messageKey: msg
+  levelKey: lvl
+  timeKey: ts
+  lineEnding: "\n"
+  levelEncoder: capitalColor
+  timeEncoder: iso8601
+stdout: true
+strerr: true
+`
+	var cfg *Config
+	if err := yaml.Unmarshal([]byte(defaultLoggerConfig), &cfg); err != nil { panic(err) }
+	l, err := NewLoggerWithConfig(cfg)
+	if err != nil { panic(err) }
+	SetDefaultLogger(l)
+	return l
 }
 
-func CreateLogger(name string) *Logger{
+func CreateLogger(name string, cfg *Config, opts... Option) (*Logger, error){
+	mutex.Lock()
+	defer mutex.Unlock()
+	if _, ok := loggers[name]; ok { return nil, fmt.Errorf("Repeated logger %v", name)}
+	l, err := NewLoggerWithConfig(cfg)
+	if err != nil { return nil, err }
+	loggers[name] = l
+	return l, nil
+}
+
+
+func SetDefaultLogger(logger *Logger) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	log := make(Logger)
-	if _, ok := loggers[name]; ok { panic(errors.New(fmt.Sprintf("Repeated logger name %v", name))) }
-	loggers[name] = &log
+	// set defaylt logger
+	defaultLogger = logger
 
-	// destructor
-	runtime.SetFinalizer(&log, func (log *Logger){
-		fmt.Println("close log ", name)
-		log.Close()
-	})
-	return &log
+	// export function
+	DPanic = defaultLogger.DPanic
+	DPanicf = defaultLogger.DPanicf
+	DPanicw = defaultLogger.DPanicw
+	Debug = defaultLogger.Debug
+	Debugf = defaultLogger.Debugf
+	Debugw = defaultLogger.Debugw
+	Error = defaultLogger.Error
+	Errorf = defaultLogger.Errorf
+	Errorw = defaultLogger.Errorw
+	Fatal = defaultLogger.Fatal
+	Fatalf = defaultLogger.Fatalf
+	Fatalw = defaultLogger.Fatalw
+	Info = defaultLogger.Info
+	Infof = defaultLogger.Infof
+	Infow = defaultLogger.Infow
+	Panic = defaultLogger.Panic
+	Panicf = defaultLogger.Panicf
+	Panicw = defaultLogger.Panicw
+	Warn = defaultLogger.Warn
+	Warnf = defaultLogger.Warnf
+	Warnw = defaultLogger.Warnw
 }
 
 
-// export
-type Logger = l4g.Logger
+var DPanic (func(args ...interface{}))
+var DPanicf func(template string, args ...interface{})
+var DPanicw func(msg string, keysAndValues ...interface{})
+var Debug func(args ...interface{})
+var Debugf func(template string, args ...interface{})
+var Debugw func(msg string, keysAndValues ...interface{})
+var Error func(args ...interface{})
+var Errorf func(template string, args ...interface{})
+var Errorw func(msg string, keysAndValues ...interface{})
+var Fatal func(args ...interface{})
+var Fatalf func(template string, args ...interface{})
+var Fatalw func(msg string, keysAndValues ...interface{})
+var Info func(args ...interface{})
+var Infof func(template string, args ...interface{})
+var Infow func(msg string, keysAndValues ...interface{})
+var Panic func(args ...interface{})
+var Panicf func(template string, args ...interface{})
+var Panicw func(msg string, keysAndValues ...interface{})
+var Warn func(args ...interface{})
+var Warnf func(template string, args ...interface{})
+var Warnw func(msg string, keysAndValues ...interface{})
 
-type YamlLogConfig = l4g.YamlLogConfig
 
-func Finest(arg0 interface{}, args ...interface{}) { defaultLogger.Finest(arg0, args...) }
 
-func Fine(arg0 interface{}, args ...interface{}) { defaultLogger.Fine(arg0, args...) }
 
-func Debug(arg0 interface{}, args ...interface{}) { defaultLogger.Debug(arg0, args...) }
 
-func Trace(arg0 interface{}, args ...interface{}) { defaultLogger.Trace(arg0, args...) }
 
-func Info(arg0 interface{}, args ...interface{}) { defaultLogger.Info(arg0, args...) }
 
-func Warn(arg0 interface{}, args ...interface{}) { defaultLogger.Warn(arg0, args...) }
-
-func Error(arg0 interface{}, args ...interface{}) { defaultLogger.Error(arg0, args...) }
-
-func Critical(arg0 interface{}, args ...interface{}) { defaultLogger.Critical(arg0, args...) }
-
-func ParseYamlConfig(config string) (*YamlLogConfig, error) { return l4g.ParseYamlConfig(config) }
