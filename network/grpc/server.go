@@ -63,7 +63,7 @@ type Server struct {
 func (h* Server) init() {
 	runtime.SetFinalizer(h, func (server *Server){
 		if err := server.listener.Close(); err != nil {
-			log.Error(err)
+			log.Errorw("Grpc server has stopped with error", "name", h.name, "error", err)
 		}
 	})
 }

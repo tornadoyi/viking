@@ -76,7 +76,7 @@ type Client struct {
 func (h* Client) init() {
 	runtime.SetFinalizer(h, func (client *Client){
 		if err := h.connection.Close(); err != nil {
-			log.Error(err)
+			log.Errorw("Grpc client connection close", "error", err)
 		}
 	})
 }

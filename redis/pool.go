@@ -14,7 +14,7 @@ type Pool struct {
 func (h *Pool) init() {
 	runtime.SetFinalizer(h, func(p *Pool) {
 		if err := p.Close(); err != nil {
-			log.Error(err)
+			log.Errorw("Redis pool closed with error", "error", err)
 		}
 	})
 }

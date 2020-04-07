@@ -167,10 +167,10 @@ func addTimer(delay time.Duration) {
 		t.Start()
 		t.Wait()
 		if t.Error() != nil {
-			log.Error(t.Error())
+			log.Errorw("Config updater run failed", "error", t.Error())
 		} else {
 			errs := t.Result().([]error)
-			for _, err := range errs { log.Error(err) }
+			for _, err := range errs { log.Errorw("Config update failed", "error", err) }
 		}
 
 		// reset timer

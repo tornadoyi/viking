@@ -62,7 +62,10 @@ func (h *Agent) SetInterval(interval time.Duration) {
 		defer h.mutex.Unlock()
 		defer h.timer.Reset(interval)
 		services, err := h.Agent.Services()
-		if err != nil { log.Error(err); return }
+		if err != nil {
+			log.Errorw("Get consul agent services failed", "error", err)
+			return
+		}
 		h.services = services
 	})
 }

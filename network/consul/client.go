@@ -86,7 +86,7 @@ func listenHealthCheck(regCheckUrl string, handler func (ctx *http.RequestCtx)) 
 
 	t := task.NewTask(func() {
 		if err := http.ListenAndServe(address, handler); err != nil {
-			log.Error(err)
+			log.Errorw("Consul health service end with error", "error", err)
 		}
 	})
 	t.Start()

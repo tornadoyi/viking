@@ -23,13 +23,17 @@ func (h *PoolConfig) PoolOptions() []PoolOption {
 	if h.IdleTimeout != nil {
 		if d, err := time.ParseDuration(*h.IdleTimeout); err == nil {
 			options = append(options, PoolIdleTimeout(d))
-		} else { log.Warn("IdleTimeout parse failed, error: %v", err) }
+		} else { log.Warnw("IdleTimeout parse failed",
+			"error", err)
+		}
 	}
 	if h.Wait != nil { options = append(options, PoolWait(*h.Wait)) }
 	if h.MaxConnLifetime != nil {
 		if d, err := time.ParseDuration(*h.MaxConnLifetime); err == nil {
 			options = append(options, PoolMaxConnLifetime(d))
-		} else { log.Warn("MaxConnLifetime parse failed, error: %v", err) }
+		} else { log.Warnw("MaxConnLifetime parse failed",
+			"error", err)
+		}
 	}
 	return options
 }
@@ -67,26 +71,26 @@ func (h *DialConfig) DialOptions() []DialOption {
 	if h.ConnectTimeout != nil {
 		if d, err := time.ParseDuration(*h.ConnectTimeout); err == nil {
 			options = append(options, DialConnectTimeout(d))
-		} else { log.Warn("ConnectTimeout parse failed, error: %v", err) }
+		} else { log.Warnw("ConnectTimeout parse failed", "error", err) }
 	}
 	if h.Database != nil { options = append(options, DialDatabase(*h.Database)) }
 	if h.KeepAlive != nil {
 		if d, err := time.ParseDuration(*h.KeepAlive); err == nil {
 			options = append(options, DialKeepAlive(d))
-		} else { log.Warn("KeepAlive parse failed, error: %v", err) }
+		} else { log.Warnw("KeepAlive parse failed", "error", err) }
 	}
 	if h.Password != nil { options = append(options, DialPassword(*h.Password)) }
 	if h.ReadTimeout != nil {
 		if d, err := time.ParseDuration(*h.ReadTimeout); err == nil {
 			options = append(options, DialReadTimeout(d))
-		} else { log.Warn("ReadTimeout parse failed, error: %v", err) }
+		} else { log.Warnw("ReadTimeout parse failed", "error", err) }
 	}
 	if h.TLSSkipVerify != nil { options = append(options, DialTLSSkipVerify(*h.TLSSkipVerify)) }
 	if h.UseTLS != nil { options = append(options, DialUseTLS(*h.UseTLS)) }
 	if h.WriteTimeout != nil {
 		if d, err := time.ParseDuration(*h.WriteTimeout); err == nil {
 			options = append(options, DialWriteTimeout(d))
-		} else { log.Warn("WriteTimeout parse failed, error: %v", err) }
+		} else { log.Warnw("WriteTimeout parse failed", "error", err) }
 	}
 	return options
 }

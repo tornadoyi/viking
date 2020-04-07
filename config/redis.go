@@ -47,15 +47,15 @@ func (h *RedisParser) parse() interface{} {
 	content := h.defaultConfig
 	pool, ok := redis.GetPool(h.pool)
 	if !ok {
-		log.Warn("Redis config %v fetch failed, error: can not find redis pool %v", h.name, h.pool)
+		log.Warnw("Can not fetch redis config with invalid pool name", "config", h.name, "pool", h.pool)
 	} else {
 		r := pool.Do(h.command, h.cmdArgs...)
 		if r.Error() != nil {
-			log.Warn("Redis config %v load failed, error: %v", h.name, r.Error())
+			log.Warnw("Redis config fetch failed", "config", h.name, "pool", h.pool, "cmd", h.CmdWithArgDesc())
 		} else  {
 			v, _ := r.Interface()
 			if v == nil {
-				log.Warn("Redis config %v parse failed, config data is nil", h.name)
+				log.Warnw("Redis config parse failed, a nil parsed result", "config", h.name)
 			} else {
 				content = v
 			}

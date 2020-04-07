@@ -38,7 +38,8 @@ func (h *FileParser) parse() interface{} {
 	// check config file
 	if filepath.IsFile(h.filePath) {
 		if data, err := file.Load(h.filePath); err != nil {
-			log.Warn("Activate default configuration due to config file load failure. config: %v  file: %v  error: %v", h.name, h.filePath, err)
+			log.Warnw("Activate default configuration due to config file load failure",
+				"name", h.name,  "file", h.filePath, "error", err)
 		} else {
 			configContent = string(data)
 		}
