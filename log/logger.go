@@ -27,6 +27,9 @@ func NewLoggerWithConfig(cfg *Config, opts ...Option) (*Logger, error) {
 
 	// options
 	if cfg.Stderr { opts = append(opts, zap.ErrorOutput(os.Stderr)) }
+	if !cfg.DisableCaller {
+		opts = append(opts, zap.AddCaller())
+	}
 	if !cfg.DisableStacktrace {
 		opts = append(opts, zap.AddStacktrace(ErrorLevel))
 	}

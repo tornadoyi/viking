@@ -29,7 +29,8 @@ encoderConfig:
   lineEnding: "\n"
   levelEncoder: lowercase
   timeEncoder: iso8601
-stdout: false
+  callerEncoder: short
+stdout: true
 strerr: false
 file:
   filename: %v
