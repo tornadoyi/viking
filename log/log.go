@@ -53,7 +53,7 @@ func CreateLogger(name string, cfg *Config, opts... Option) (*Logger, error){
 	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := loggers[name]; ok { return nil, fmt.Errorf("Repeated logger %v", name)}
-	l, err := NewLoggerWithConfig(cfg)
+	l, err := NewLoggerWithConfig(cfg, opts...)
 	if err != nil { return nil, err }
 	loggers[name] = l
 	return l, nil
