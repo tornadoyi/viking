@@ -89,6 +89,7 @@ func SetDefaultLogger(logger *Logger) {
 	Warn = defaultLogger.Warn
 	Warnf = defaultLogger.Warnf
 	Warnw = defaultLogger.Warnw
+	Sync = defaultLogger.Sync
 }
 
 
@@ -113,7 +114,7 @@ var Panicw func(msg string, keysAndValues ...interface{})
 var Warn func(args ...interface{})
 var Warnf func(template string, args ...interface{})
 var Warnw func(msg string, keysAndValues ...interface{})
-
+var Sync func() error
 
 
 
