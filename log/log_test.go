@@ -18,7 +18,7 @@ disableStacktrace: false
 sampling:
   initial: 100
   thereafter: 100
-encoding: json
+encoding: console
 encoderConfig:
   messageKey: msg
   levelKey: lvl
@@ -27,7 +27,7 @@ encoderConfig:
   callerKey: caller
   stacktraceKey: stacktrace
   lineEnding: "\n"
-  levelEncoder: lowercase
+  levelEncoder: capitalColor
   timeEncoder: iso8601
   callerEncoder: short
 stdout: true
