@@ -3,9 +3,8 @@ package log
 
 import (
 	"fmt"
-	"git.corpautohome.com/deeprecom/recengine/define"
-	"github.com/tornadoyi/viking/goplus/path/filepath"
 	"gopkg.in/yaml.v2"
+	"os"
 	"testing"
 )
 
@@ -40,7 +39,8 @@ file:
   maxbackups: 3
   compress: false
 `
-	content = fmt.Sprintf(content, filepath.Join(define.LogPath(), "xxx", "test.log"),)
+	log_path := "test.log"
+	content = fmt.Sprintf(content, log_path)
 	var cfg *Config
 	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil { t.Fatal(err) }
 	logger, err := NewLoggerWithConfig(cfg)
@@ -48,4 +48,5 @@ file:
 
 	logger.Infow("test", "filed1", 1, "field2", 2)
 
+	os.Remove(log_path)
 }
