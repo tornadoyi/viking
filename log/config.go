@@ -13,6 +13,7 @@ type Config struct {
 	File							*RotateLogger					`json:"file" yaml:"file"`
 	Stdout							bool							`json:"stdout" yaml:"stdout"`
 	Stderr							bool							`json:"stderr" yaml:"stderr"`
+	Default							bool							`json:"default" yaml:"default"`
 }
 
 

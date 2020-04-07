@@ -40,12 +40,12 @@ encoderConfig:
   timeEncoder: iso8601
 stdout: true
 strerr: true
+default: true
 `
 	var cfg *Config
 	if err := yaml.Unmarshal([]byte(defaultLoggerConfig), &cfg); err != nil { panic(err) }
-	l, err := NewLoggerWithConfig(cfg)
+	l, err := CreateLogger("__default_logger__", cfg)
 	if err != nil { panic(err) }
-	SetDefaultLogger(l)
 	return l
 }
 
@@ -53,17 +53,13 @@ func CreateLogger(name string, cfg *Config, opts... Option) (*Logger, error){
 	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := loggers[name]; ok { return nil, fmt.Errorf("Repeated logger %v", name)}
-	l, err := NewLoggerWithConfig(cfg, opts...)
+	l, err := newLoggerWithConfig(cfg, opts...)
 	if err != nil { return nil, err }
 	loggers[name] = l
+
+	if cfg.Default { defaultLogger = l }
+
 	return l, nil
-}
-
-
-func SetDefaultLogger(logger *Logger) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	defaultLogger = logger
 }
 
 

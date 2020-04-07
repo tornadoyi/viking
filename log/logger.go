@@ -11,7 +11,7 @@ import (
 
 type Logger		= zap.SugaredLogger
 
-func NewLoggerWithConfig(cfg *Config, opts ...Option) (*Logger, error) {
+func newLoggerWithConfig(cfg *Config, opts ...Option) (*Logger, error) {
 	// encoder
 	encoder, err := NewEncoder(cfg.Encoding, cfg.EncoderConfig)
 	if err != nil { return nil, err}
@@ -37,6 +37,9 @@ func NewLoggerWithConfig(cfg *Config, opts ...Option) (*Logger, error) {
 		opts = append(opts, zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 			return zapcore.NewSampler(core, time.Second, int(cfg.Sampling.Initial), int(cfg.Sampling.Thereafter))
 		}))
+	}
+	if cfg.Default {
+		opts = append(opts, zap.AddCallerSkip(1))
 	}
 	if len(cfg.InitialFields) > 0 {
 		fs := make([]zap.Field, 0, len(cfg.InitialFields))
