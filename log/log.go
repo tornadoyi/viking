@@ -63,58 +63,32 @@ func CreateLogger(name string, cfg *Config, opts... Option) (*Logger, error){
 func SetDefaultLogger(logger *Logger) {
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// set defaylt logger
 	defaultLogger = logger
-
-	// export function
-	DPanic = defaultLogger.DPanic
-	DPanicf = defaultLogger.DPanicf
-	DPanicw = defaultLogger.DPanicw
-	Debug = defaultLogger.Debug
-	Debugf = defaultLogger.Debugf
-	Debugw = defaultLogger.Debugw
-	Error = defaultLogger.Error
-	Errorf = defaultLogger.Errorf
-	Errorw = defaultLogger.Errorw
-	Fatal = defaultLogger.Fatal
-	Fatalf = defaultLogger.Fatalf
-	Fatalw = defaultLogger.Fatalw
-	Info = defaultLogger.Info
-	Infof = defaultLogger.Infof
-	Infow = defaultLogger.Infow
-	Panic = defaultLogger.Panic
-	Panicf = defaultLogger.Panicf
-	Panicw = defaultLogger.Panicw
-	Warn = defaultLogger.Warn
-	Warnf = defaultLogger.Warnf
-	Warnw = defaultLogger.Warnw
-	Sync = defaultLogger.Sync
 }
 
 
-var DPanic (func(args ...interface{}))
-var DPanicf func(template string, args ...interface{})
-var DPanicw func(msg string, keysAndValues ...interface{})
-var Debug func(args ...interface{})
-var Debugf func(template string, args ...interface{})
-var Debugw func(msg string, keysAndValues ...interface{})
-var Error func(args ...interface{})
-var Errorf func(template string, args ...interface{})
-var Errorw func(msg string, keysAndValues ...interface{})
-var Fatal func(args ...interface{})
-var Fatalf func(template string, args ...interface{})
-var Fatalw func(msg string, keysAndValues ...interface{})
-var Info func(args ...interface{})
-var Infof func(template string, args ...interface{})
-var Infow func(msg string, keysAndValues ...interface{})
-var Panic func(args ...interface{})
-var Panicf func(template string, args ...interface{})
-var Panicw func(msg string, keysAndValues ...interface{})
-var Warn func(args ...interface{})
-var Warnf func(template string, args ...interface{})
-var Warnw func(msg string, keysAndValues ...interface{})
-var Sync func() error
+func DPanic(args ...interface{}) { defaultLogger.DPanic(args...) }
+func DPanicf(template string, args ...interface{}) { defaultLogger.DPanicf(template, args...) }
+func DPanicw(msg string, keysAndValues ...interface{}) { defaultLogger.DPanicw(msg, keysAndValues...) }
+func Debug(args ...interface{}) { defaultLogger.Debug(args...) }
+func Debugf(template string, args ...interface{}) { defaultLogger.Debugf(template, args...) }
+func Debugw(msg string, keysAndValues ...interface{}) { defaultLogger.Debugw(msg, keysAndValues...) }
+func Error(args ...interface{}) { defaultLogger.Error(args...) }
+func Errorf(template string, args ...interface{}) { defaultLogger.Errorf(template, args...) }
+func Errorw(msg string, keysAndValues ...interface{}) { defaultLogger.Errorw(msg, keysAndValues...) }
+func Fatal(args ...interface{}) { defaultLogger.Fatal(args...) }
+func Fatalf(template string, args ...interface{}) { defaultLogger.Fatalf(template, args...) }
+func Fatalw(msg string, keysAndValues ...interface{}) { defaultLogger.Fatalw(msg, keysAndValues...) }
+func Info(args ...interface{}) { defaultLogger.Info(args...) }
+func Infof(template string, args ...interface{}) { defaultLogger.Infof(template, args...) }
+func Infow(msg string, keysAndValues ...interface{}) { defaultLogger.Infow(msg, keysAndValues...) }
+func Panic(args ...interface{}) { defaultLogger.Panic(args...) }
+func Panicf(template string, args ...interface{}) { defaultLogger.Panicf(template, args...) }
+func Panicw(msg string, keysAndValues ...interface{}) { defaultLogger.Panicw(msg, keysAndValues...) }
+func Warn(args ...interface{}) { defaultLogger.Warn(args...) }
+func Warnf(template string, args ...interface{}) { defaultLogger.Warnf(template, args...) }
+func Warnw(msg string, keysAndValues ...interface{}) { defaultLogger.Warnw(msg, keysAndValues...) }
+func Sync() error { return defaultLogger.Sync() }
 
 
 
