@@ -16,7 +16,7 @@ var (
 			fmt.Sprintf("%v", info.stack),
 			fmt.Sprintf("error: %v\n", info.Error()),
 		)
-		log.Fatal(strings.Join(msgs, "\n"))
+		log.Error(strings.Join(msgs, "\n"))
 	}
 )
 
