@@ -6,6 +6,7 @@ import (
 )
 
 type TestStruct struct {
+	sInt32			int32
 	Bool			bool
 	Int				int
 	Int8			int8
@@ -30,10 +31,12 @@ type TestStruct struct {
 	Slice			[]*TestStruct
 	String			string
 
-	InStruct struct{
+	InnerStruct struct{
 		A 		*int
 		B		int
 	}
+
+
 }
 
 
@@ -100,4 +103,28 @@ func TestDFS(t *testing.T) {
 		}
 		if p != v { t.Errorf("Error path %v, expect %v", p, v) }
 	}
+}
+
+
+func TestGetAndSetPrivateValue(t *testing.T){
+
+	s := &struct {
+		private			int
+	}{0}
+
+	v := ValueOf(s).Elem().FieldByName("private")
+	if v.CanInterface() { t.Fatal("why private member can be accessed ?") }
+	if v.CanSet() { t.Fatal("why private member can be set ?") }
+	newPrivate := ValueOf(int(1))
+	SetValue(v, newPrivate)
+	if GetValue(v).Interface().(int) != 1 { t.Fail() }
+}
+
+
+func TestReconstruct(t *testing.T) {
+	ts := &TestStruct{
+		Slice: []*TestStruct{&TestStruct{Int8: 8}, &TestStruct{Bool: false}},
+		Map: map[string]int{"Key1": 1, "Key2": 2},
+	}
+	if _, err := Reconstruct(ts); err != nil { t.Fatal(err) }
 }

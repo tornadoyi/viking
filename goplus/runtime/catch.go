@@ -41,6 +41,6 @@ func CatchCallback(cb func(*PanicInfo)) {
 	err := recover()
 	if err == nil { return }
 	info := &PanicInfo{fmt.Errorf("%v", err), Trace(3)}
-	if catchErrCallback != nil { catchErrCallback(info) }
+	//if catchErrCallback != nil { catchErrCallback(info) }
 	if cb != nil { cb(info) }
 }
