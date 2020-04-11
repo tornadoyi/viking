@@ -1,12 +1,13 @@
 package reflect
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
 
 type TestStruct struct {
-	sInt32			int32
 	Bool			bool
 	Int				int
 	Int8			int8
@@ -37,6 +38,8 @@ type TestStruct struct {
 	}
 
 
+	privateString	string
+	privateString2	string
 }
 
 
@@ -121,10 +124,58 @@ func TestGetAndSetPrivateValue(t *testing.T){
 }
 
 
-func TestReconstruct(t *testing.T) {
-	ts := &TestStruct{
-		Slice: []*TestStruct{&TestStruct{Int8: 8}, &TestStruct{Bool: false}},
-		Map: map[string]int{"Key1": 1, "Key2": 2},
-	}
-	if _, err := Reconstruct(ts); err != nil { t.Fatal(err) }
+
+
+func TestRefactor(t *testing.T) {
+
+	t.Run("Types", func(t *testing.T) {
+		ts := &TestStruct{
+			Slice: []*TestStruct{&TestStruct{Int8: 8}, &TestStruct{Bool: false}},
+			Map: map[string]int{"Key1": 1, "Key2": 2},
+		}
+		if _,  err := Refactor(ts); err != nil { t.Fatal(err) }
+	})
+
+	t.Run("Private", func(t *testing.T) {
+		type Test struct {
+			Public			string
+			private			string
+		}
+		ts := &Test{"public value", "private value"}
+		newts, err := Refactor(ts)
+		if err != nil { t.Fatal(err) }
+		if !strings.Contains(fmt.Sprintf("%v", newts), ts.Public) { t.Fail() }
+		if !strings.Contains(fmt.Sprintf("%v", newts), ts.private) { t.Fail() }
+	})
+
+
+	t.Run("Option", func(t *testing.T) {
+		type Test struct {
+			Public			string
+			private			string
+		}
+		ts := &Test{"public value", "private value"}
+		newts, err := Refactor(ts, []RefactorOption{
+			RefactorTitle(true),
+			RefactorWithTag(false)}...)
+		if err != nil { t.Fatal(err) }
+		bs, err := json.Marshal(newts)
+		if err != nil { t.Fatal(err) }
+		if !strings.Contains(string(bs), "private") {t.Fail()}
+	})
+
+	t.Run("Tag", func(t *testing.T) {
+		type Test struct {
+			NoRefactor		string				`refactor:"-"`
+			Public			string
+			private			string				`refactor:"PrivateKey"`
+		}
+		ts := &Test{"NoRefactorValue", "public value", "private value"}
+		newts, err := Refactor(ts)
+		if err != nil { t.Fatal(err) }
+		bs, err := json.Marshal(newts)
+		if err != nil { t.Fatal(err) }
+		if strings.Contains(string(bs), "NoRefactorValue") {t.Fatalf("tag \"-\" doesn't work")}
+		if !strings.Contains(string(bs), "PrivateKey") {t.Fatalf("tag \"name\" doesn't work")}
+	})
 }

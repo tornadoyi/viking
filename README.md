@@ -13,6 +13,7 @@ go get -u github.com/valyala/fasthttp
 go get -u github.com/buaazp/fasthttprouter
 go get -u go.uber.org/zap
 go get -u gopkg.in/natefinch/lumberjack.v2
+go get -u github.com/iancoleman/strcase
 ```
 
 ## Quick Install
