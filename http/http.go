@@ -37,7 +37,8 @@ type URI = fasthttp.URI
 
 
 
-
+var AcquireRequest = fasthttp.AcquireRequest
+var AcquireResponse = fasthttp.AcquireResponse
 var AcquireTimer = fasthttp.AcquireTimer
 var AppendDeflateBytes = fasthttp.AppendDeflateBytes
 var AppendDeflateBytesLevel = fasthttp.AppendDeflateBytesLevel
