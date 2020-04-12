@@ -18,6 +18,12 @@ func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err erro
 }
 
 func refactor(o Value, cfg *RefactorConfig) Value {
+	f := o.MethodByName("Refactor")
+	if f.IsValid() && !f.IsZero(){
+		outs := f.Call(nil)
+		if len(outs) == 1 { return outs[0]}
+	}
+
 	switch o.Kind() {
 	case Map: return refactorMap(o, cfg)
 	case Slice, Array: return refactorSlice(o, cfg)

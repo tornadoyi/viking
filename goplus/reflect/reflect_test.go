@@ -125,6 +125,18 @@ func TestGetAndSetPrivateValue(t *testing.T){
 
 
 
+type RefactorObject struct {
+	Int64						int64
+	String						string
+}
+func (h *RefactorObject) Refactor() interface{} {
+	return struct {
+		Int64_1					int64
+		Int64_2					int64
+		String1					string
+		String2					string
+	}{h.Int64, h.Int64+1, h.String, h.String}
+}
 
 func TestRefactor(t *testing.T) {
 
@@ -177,5 +189,19 @@ func TestRefactor(t *testing.T) {
 		if err != nil { t.Fatal(err) }
 		if strings.Contains(string(bs), "NoRefactorValue") {t.Fatalf("tag \"-\" doesn't work")}
 		if !strings.Contains(string(bs), "PrivateKey") {t.Fatalf("tag \"name\" doesn't work")}
+	})
+
+	t.Run("RefactorFunction", func(t *testing.T) {
+
+		type Test struct {
+			NoRefactor		string				`refactor:"-"`
+			RefObject		*RefactorObject
+		}
+		ts := &Test{"NoRefactorValue", &RefactorObject{0, "hello"}}
+		newts, err := Refactor(ts)
+		if err != nil { t.Fatal(err) }
+		bs, err := json.Marshal(newts)
+		if err != nil { t.Fatal(err) }
+		if !strings.Contains(string(bs), "Int64_1") {t.Fatalf("tag \"name\" doesn't work")}
 	})
 }
