@@ -1,6 +1,7 @@
 package reflect
 
 import (
+	"fmt"
 	"github.com/tornadoyi/viking/goplus/runtime"
 	"unsafe"
 )
@@ -17,14 +18,31 @@ func CallValue(v Value, in []Value) (out []Value, err error) {
 }
 
 // can get unexported value
-func GetValue(v Value) Value {
-	if v.CanInterface() { return v}
-	return NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem()
+func Readable(v Value) Value {
+	if !v.IsValid() || v.CanInterface() { return v}
+	if v.CanAddr() { return NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem() }
+	switch v.Kind() {
+	case Bool: return ValueOf(v.Bool())
+	case String: return ValueOf(v.String())
+	case Int, Int8, Int16, Int32, Int64: return ValueOf(v.Int())
+	case Uint, Uintptr, Uint8, Uint16, Uint32, Uint64: return ValueOf(v.Uint())
+	case Float32, Float64: return ValueOf(v.Float())
+	case Complex64, Complex128: return ValueOf(v.Complex())
+	default:
+		var invalid Value
+		return invalid
+	}
 }
 
 // can set unexported value
-func SetValue(dst Value, src Value) {
-	src = GetValue(src)
-	if !dst.CanSet() { dst = NewAt(dst.Type(), unsafe.Pointer(dst.UnsafeAddr())).Elem() }
+func SetValue(dst Value, src Value) error {
+	if !dst.IsValid() { return fmt.Errorf("invalid destination value") }
+	src = Readable(src)
+	if !src.IsValid() { return fmt.Errorf("source value %v can not readable", src) }
+	if !dst.CanSet() {
+		if !dst.CanAddr() { return fmt.Errorf("unddressed destionation value v", dst)}
+		dst = NewAt(dst.Type(), unsafe.Pointer(dst.UnsafeAddr())).Elem()
+	}
 	dst.Set(src)
+	return nil
 }
