@@ -1,9 +1,27 @@
 package reflect
 
 import (
+	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"strings"
 )
+
+func RefactorJson(obj interface{}, opt... RefactorOption) ([]byte, error){
+	st, err := Refactor(obj, opt...)
+	if err != nil { return nil, err}
+	data, err := json.Marshal(st)
+	if err != nil { return nil, err}
+	return data, nil
+}
+
+func RefactorYaml(obj interface{}, opt... RefactorOption) ([]byte, error){
+	st, err := Refactor(obj, opt...)
+	if err != nil { return nil, err}
+	data, err := yaml.Marshal(st)
+	if err != nil { return nil, err}
+	return data, nil
+}
 
 func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err error){
 	cfg := &RefactorConfig{
