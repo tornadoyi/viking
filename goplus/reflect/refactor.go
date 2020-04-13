@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+
 func RefactorJson(obj interface{}, opt... RefactorOption) ([]byte, error){
 	st, err := Refactor(obj, opt...)
 	if err != nil { return nil, err}
@@ -24,18 +25,24 @@ func RefactorYaml(obj interface{}, opt... RefactorOption) ([]byte, error){
 }
 
 func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err error){
-	cfg := &RefactorConfig{
-		false,
-		true,
-	}
-	for _, o := range opt { o.apply(cfg) }
+	// check type
 	o := ValueOf(obj)
 	if o.Kind() != Ptr { return nil, fmt.Errorf("refactoring object must be a pointer")}
+
+	// init config
+	cfg := &RefactorConfig{
+		Title: false,
+		WithTag: true,
+	}
+	for _, o := range opt { o.apply(cfg) }
+
+	// refactor
 	v := refactor(o, cfg)
 	return v.Interface(), nil
 }
 
 func refactor(o Value, cfg *RefactorConfig) Value {
+	// refactor function
 	f := o.MethodByName("Refactor")
 	if f.IsValid() && !f.IsZero(){
 		outs := f.Call(nil)
@@ -191,7 +198,18 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 type RefactorConfig struct {
 	Title					bool						`json:"title" yaml:"title"`
 	WithTag					bool						`json:"with_tag" yaml:"with_tag"`
+	Kinds					[]Kind						`json:"kinds" yaml:"kinds"`
+	kindDict				map[Kind]bool
 }
+
+func (h *RefactorConfig) ContainKind(k Kind) bool {
+	if len(h.Kinds) != len(h.kindDict) {
+		for _, k := range h.Kinds { h.kindDict[k] = true }
+	}
+	_, ok := h.kindDict[k]
+	return ok
+}
+
 
 
 type RefactorOption struct {
@@ -208,5 +226,26 @@ func RefactorTitle(title bool) RefactorOption{
 func RefactorWithTag(withtag bool) RefactorOption{
 	return RefactorOption{func(c *RefactorConfig){
 		c.WithTag = withtag
+	}}
+}
+
+func RefactorKinds(kinds []Kind) RefactorOption {
+	return RefactorOption{func(c *RefactorConfig){
+		c.Kinds = append(c.Kinds, kinds...)
+	}}
+}
+
+
+func RefactorMarshallKinds() RefactorOption {
+	return RefactorOption{func(c *RefactorConfig){
+		c.Kinds = append(c.Kinds,
+			Bool,
+			Int, Int8, Int16, Int32, Int64,
+			Uint, Uint8, Uint16, Uint32, Uint64,
+			Float32, Float64,
+			Array, Slice, Map,
+			String, Interface,  Struct,
+			Ptr,
+		)
 	}}
 }
