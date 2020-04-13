@@ -42,7 +42,7 @@ func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err erro
 func refactor(o Value, cfg *RefactorConfig) Value {
 	// refactor function
 	f := o.MethodByName("Refactor")
-	if f.IsValid() && !f.IsZero(){
+	if f.IsValid() && !f.IsZero() && f.CanInterface(){
 		outs := f.Call(nil)
 		if len(outs) == 1 { return outs[0]}
 	}
