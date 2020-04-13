@@ -55,6 +55,7 @@ func refactor(o Value, cfg *RefactorConfig) Value {
 	case Slice, Array: return refactorSlice(o, cfg)
 	case Chan: return refactorChan(o, cfg)
 	case Struct: return refactorStruct(o, cfg)
+	case Interface: return refactor(o.Elem(), cfg)
 	case Ptr: return refactorPtr(o, cfg)
 	}
 	// default
