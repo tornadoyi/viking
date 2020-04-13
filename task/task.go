@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tornadoyi/viking/goplus/runtime"
+	"github.com/tornadoyi/viking/log"
 	"sync"
 	"time"
 )
 
 const (
-	Init		int = iota
+	Init				State = iota
 	Running
 	Finished
 	Canceled
@@ -18,11 +19,12 @@ const (
 
 type Task struct {
 	function			*runtime.JITFunc
-	state				int
+	state				State
 	result				interface{}
 	error				error
 	stack				runtime.StackInfo
 	wg					*sync.WaitGroup
+	terminateCallback	*runtime.JITFunc
 	mutex				sync.RWMutex
 }
 
@@ -30,61 +32,59 @@ func NewTask(f interface{}, args... interface{}) *Task {
 	return newTask(&sync.WaitGroup{}, f, args...)
 }
 
-func (h *Task) State() int {
+func (h *Task) State() State {
 	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	return h.state
+	s := h.state
+	h.mutex.RUnlock()
+	return s
 }
 
 func (h *Task) Error() error {
 	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	return h.error
+	err := h.error
+	h.mutex.RUnlock()
+	return err
 }
 
 func (h *Task) Result() interface{} {
 	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	return h.result
+	result := h.result
+	h.mutex.RUnlock()
+	return result
 }
 
 func (h *Task) Finished() bool {
 	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	return h.state == Finished
+	ret := h.state == Finished
+	h.mutex.RUnlock()
+	return ret
 }
 
 func (h *Task) Canceled() bool {
 	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	return h.state == Canceled
+	ret := h.state == Canceled
+	h.mutex.RUnlock()
+	return ret
 }
 
 func (h *Task) Terminated() bool {
 	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	return h.state == Finished || h.state == Canceled
+	ret := h.state == Finished || h.state == Canceled
+	h.mutex.RUnlock()
+	return ret
 }
 
-
-
-func (h *Task) StateDesc() string {
-	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-	switch h.state {
-	case Init: return "Init"
-	case Running: return "Running"
-	case Finished: return "Finished"
-	case Canceled: return "Canceled"
-	default: return "Invalid"
-	}
+func (h *Task) SetTerminateCallback (f func(*Task)) {
+	h.mutex.Lock()
+	h.terminateCallback = runtime.NewJITFunc(f)
+	h.mutex.Unlock()
 }
 
 func (h *Task) Start(){
 	var stateErr error = nil
 	h.mutex.Lock()
 	if h.state != Init {
-		stateErr = fmt.Errorf("Task can not start, current state is %v", h.StateDesc())
+		stateErr = fmt.Errorf("task can not start, current state is %v", h.state)
 	} else {
 		h.state = Running
 		h.wg.Add(1)
@@ -93,44 +93,13 @@ func (h *Task) Start(){
 	if stateErr != nil { panic(stateErr) }
 
 	go func() {
-		defer func(){
-			h.mutex.Lock()
-			if h.state == Running {
-				h.wg.Done()
-				h.state = Finished
-			}
-			h.mutex.Unlock()
-		}()
-
-		// collect results
 		result, err := h.function.Call()
-
-		// save result
-		h.mutex.Lock()
-		if h.state != Canceled {
-			h.result = result
-			h.error = err
-		}
-		h.mutex.Unlock()
+		h.terminate(false, result, err)
 	}()
 }
 
 func (h *Task) Cancel(){
-	switch h.State() {
-	case Init:
-		h.mutex.Lock()
-		h.state = Canceled
-		h.error = fmt.Errorf("Positive cancel")
-		h.mutex.Unlock()
-		return
-	case Running:
-		h.mutex.Lock()
-		h.state = Canceled
-		h.error = fmt.Errorf("Positive cancel")
-		h.wg.Done()
-		h.mutex.Unlock()
-	case Canceled, Finished: return
-	}
+	h.terminate(true, nil, errors.New("positive cancel"))
 }
 
 
@@ -158,7 +127,6 @@ func (h *Task) WaitTimeout(timeout time.Duration) {
 }
 
 
-
 func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 	return &Task{
 		function: runtime.NewJITFunc(f, args...),
@@ -168,5 +136,40 @@ func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 		stack:    runtime.Trace(2),
 		wg:       wg,
 		mutex:    sync.RWMutex{},
+	}
+}
+
+func (h *Task) terminate(cancel bool, result interface{}, err error) {
+	// check state
+	s := h.State()
+	if s == Canceled || s == Finished { return }
+
+	// terminate
+	h.mutex.Lock()
+	if s == Running { h.wg.Done() }
+	if cancel { h.state = Canceled } else { h.state = Finished }
+	h.error = err
+	h.result = result
+	h.mutex.Unlock()
+
+	// callback
+	if h.terminateCallback != nil {
+		_, err := h.terminateCallback.Call(h)
+		if err != nil { log.Error(err) }
+	}
+}
+
+
+
+
+
+type 		State				int
+func (h State) String() string {
+	switch h {
+	case Init: 		return "Init"
+	case Running: 	return "Running"
+	case Finished: 	return "Finished"
+	case Canceled: 	return "Canceled"
+	default: 		return "Invalid"
 	}
 }
