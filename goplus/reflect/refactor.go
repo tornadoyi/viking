@@ -76,7 +76,7 @@ func refactorSlice(o Value, cfg *RefactorConfig) Value {
 		if nv := refactor(v, cfg); !nv.IsValid() { continue } else { s = append(s, nv) }
 	}
 	if len(s) == 0 { return MakeSlice(o.Type(), 0, o.Cap()) }
-	
+
 	var tp Type
 	for _, v := range s {
 		if tp == nil { tp = v.Type(); continue }
@@ -91,7 +91,6 @@ func refactorSlice(o Value, cfg *RefactorConfig) Value {
 }
 
 func refactorMap(o Value, cfg *RefactorConfig) Value {
-	if o.Len() == 0 { return MakeMap(o.Type()) }
 	kvs := make(map[Value]Value, o.Len())
 	it := o.MapRange()
 	for it.Next() {
@@ -102,6 +101,8 @@ func refactorMap(o Value, cfg *RefactorConfig) Value {
 		if !nv.IsValid() { continue }
 		kvs[nk] = nv
 	}
+	if len(kvs) == 0 { return MakeMap(o.Type()) }
+
 	var ktype, vtype Type
 	for k, _ := range kvs {
 		if ktype == nil {
