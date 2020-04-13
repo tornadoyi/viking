@@ -2,11 +2,9 @@ package reflect
 
 import "github.com/tornadoyi/viking/goplus/runtime"
 
-func Instantiate(obj interface{}) (err error){
+func Instantiate(obj interface{}) (reterr error){
 
-	defer runtime.CatchCallback(func(info *runtime.PanicInfo) {
-		err = info.Error()
-	})
+	defer runtime.CatchCallback(func(err error) { reterr = err })
 
 	var dispatch func(Type) Value
 	var newStruct func(Type) Value

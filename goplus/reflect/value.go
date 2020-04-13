@@ -7,11 +7,8 @@ import (
 )
 
 
-func CallValue(v Value, in []Value) (out []Value, err error) {
-	defer runtime.CatchCallback(func(info *runtime.PanicInfo) {
-		out = nil
-		err = info.Error()
-	})
+func CallValue(v Value, in []Value) (out []Value, reterr error) {
+	defer runtime.CatchCallback(func(err error) { out, reterr = nil, err })
 
 	out = v.Call(in)
 	return out, nil

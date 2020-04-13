@@ -4,11 +4,9 @@ import "github.com/tornadoyi/viking/goplus/runtime"
 
 type interactFunc					func(*Request, *Response) (interface{}, error)
 
-func DoWithContext(f interactFunc) (ret interface{}, err error) {
+func DoWithContext(f interactFunc) (ret interface{}, reterr error) {
 	// catch error
-	defer runtime.CatchCallback(func(info *runtime.PanicInfo) {
-		err = info.Error()
-	})
+	defer runtime.CatchCallback(func(err error) { reterr = err })
 
 	// get from pool
 	req := AcquireRequest()
@@ -16,6 +14,6 @@ func DoWithContext(f interactFunc) (ret interface{}, err error) {
 	defer ReleaseRequest(req)
 	defer ReleaseResponse(resp)
 
-	ret, err = f(req, resp)
-	return ret, err
+	ret, reterr = f(req, resp)
+	return ret, reterr
 }

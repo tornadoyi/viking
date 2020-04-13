@@ -85,9 +85,7 @@ func (h *JITFunc) Compile() error {
 
 func (h *JITFunc) Call(args... interface{}) (ret interface{}, reterr error) {
 
-	defer CatchCallback(func(info *PanicInfo){
-		reterr = info.Error()
-	})
+	defer CatchCallback(func(err error){ ret, reterr = nil, err })
 
 	if err := h.Compile(); err != nil { return nil, err}
 

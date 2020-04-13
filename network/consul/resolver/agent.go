@@ -86,10 +86,10 @@ func (h *AgentResolver) init() error{
 }
 
 
-func (h *AgentResolver) updateState() (err error) {
+func (h *AgentResolver) updateState() (reterr error) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	defer runtime.CatchCallback(func(info *runtime.PanicInfo) { err = info.Error() })
+	defer runtime.CatchCallback(func(err error) { reterr = err })
 
 	address := make([]_resolver.Address, 0)
 	for _, s := range h.agent.Services() {
