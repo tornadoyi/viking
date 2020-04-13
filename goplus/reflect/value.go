@@ -6,6 +6,9 @@ import (
 	"unsafe"
 )
 
+var (
+	InvalidValue					= Value{}
+)
 
 func CallValue(v Value, in []Value) (out []Value, reterr error) {
 	defer runtime.CatchCallback(func(err error) { out, reterr = nil, err })
@@ -25,9 +28,7 @@ func Readable(v Value) Value {
 	case Uint, Uintptr, Uint8, Uint16, Uint32, Uint64: return ValueOf(v.Uint())
 	case Float32, Float64: return ValueOf(v.Float())
 	case Complex64, Complex128: return ValueOf(v.Complex())
-	default:
-		var invalid Value
-		return invalid
+	default: return InvalidValue
 	}
 }
 
@@ -37,7 +38,7 @@ func SetValue(dst Value, src Value) error {
 	src = Readable(src)
 	if !src.IsValid() { return fmt.Errorf("source value %v can not readable", src) }
 	if !dst.CanSet() {
-		if !dst.CanAddr() { return fmt.Errorf("unddressed destionation value v", dst)}
+		if !dst.CanAddr() { return fmt.Errorf("unddressed destionation value %v", dst)}
 		dst = NewAt(dst.Type(), unsafe.Pointer(dst.UnsafeAddr())).Elem()
 	}
 	dst.Set(src)

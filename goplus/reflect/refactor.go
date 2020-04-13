@@ -9,6 +9,7 @@ import (
 
 
 func RefactorJson(obj interface{}, opt... RefactorOption) ([]byte, error){
+	opt = append(opt, RefactorMarshallKinds())
 	st, err := Refactor(obj, opt...)
 	if err != nil { return nil, err}
 	data, err := json.Marshal(st)
@@ -17,6 +18,7 @@ func RefactorJson(obj interface{}, opt... RefactorOption) ([]byte, error){
 }
 
 func RefactorYaml(obj interface{}, opt... RefactorOption) ([]byte, error){
+	opt = append(opt, RefactorMarshallKinds())
 	st, err := Refactor(obj, opt...)
 	if err != nil { return nil, err}
 	data, err := yaml.Marshal(st)
@@ -37,8 +39,7 @@ func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err erro
 	for _, o := range opt { o.apply(cfg) }
 
 	// refactor
-	v := refactor(o, cfg)
-	return v.Interface(), nil
+	if v := refactor(o, cfg); !v.IsValid() { return nil, nil } else { return v.Interface(), nil }
 }
 
 func refactor(o Value, cfg *RefactorConfig) Value {
@@ -48,6 +49,9 @@ func refactor(o Value, cfg *RefactorConfig) Value {
 		outs := f.Call(nil)
 		if len(outs) == 1 { return outs[0]}
 	}
+
+	// check valid kind
+	if !validKind(o, cfg) { return InvalidValue}
 
 	switch o.Kind() {
 	case Map: return refactorMap(o, cfg)
@@ -64,15 +68,15 @@ func refactor(o Value, cfg *RefactorConfig) Value {
 
 func refactorPtr(o Value, cfg *RefactorConfig) Value {
 	if o.IsNil() { return New(o.Type()).Elem() }
-	return refactor(o.Elem(), cfg).Addr()
+	if v := refactor(o.Elem(), cfg); !v.IsValid() { return v} else { return v.Addr()}
 }
 
 func refactorSlice(o Value, cfg *RefactorConfig) Value {
 	if o.Len() == 0 { return MakeSlice(o.Type(), 0, o.Cap()) }
-	s := make([]Value, o.Len())
+	s := make([]Value, 0, o.Len())
 	for i:=0; i<o.Len(); i++{
 		v := o.Index(i)
-		s[i] = refactor(v, cfg)
+		if nv := refactor(v, cfg); !nv.IsValid() { continue } else { s = append(s, nv) }
 	}
 	var tp Type
 	for _, v := range s {
@@ -94,7 +98,9 @@ func refactorMap(o Value, cfg *RefactorConfig) Value {
 	for it.Next() {
 		k, v := it.Key(), it.Value()
 		nk := refactor(k, cfg)
+		if !nk.IsValid() { continue }
 		nv := refactor(v, cfg)
+		if !nv.IsValid() { continue }
 		kvs[nk] = nv
 	}
 	var ktype, vtype Type
@@ -174,6 +180,7 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 		// add field
 		v := o.Field(i)
 		nv := refactor(v, cfg)
+		if !nv.IsValid() { continue }
 		nvs = append(nvs, nv)
 		fields = append(fields, StructField{
 			fieldName,
@@ -192,6 +199,12 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 	return ret
 }
 
+func validKind(o Value, cfg *RefactorConfig) bool {
+	if !cfg.ContainKind(o.Kind()) { return false}
+	if o.Kind() == Ptr { return validKind(o.Elem(), cfg) }
+	return true
+}
+
 
 
 
@@ -203,7 +216,9 @@ type RefactorConfig struct {
 }
 
 func (h *RefactorConfig) ContainKind(k Kind) bool {
-	if len(h.Kinds) != len(h.kindDict) {
+	if len(h.Kinds) == 0 { return true}
+	if h.kindDict == nil {
+		h.kindDict = make(map[Kind]bool)
 		for _, k := range h.Kinds { h.kindDict[k] = true }
 	}
 	_, ok := h.kindDict[k]

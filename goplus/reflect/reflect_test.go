@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-type TestStruct struct {
+type AllTypes struct {
 	Bool			bool
 	Int				int
 	Int8			int8
@@ -29,7 +29,7 @@ type TestStruct struct {
 	Func			func(int, string) float32
 	Interface		interface{}
 	Map				map[string]int
-	Slice			[]*TestStruct
+	Slice			[]*AllTypes
 	String			string
 
 	InnerStruct struct{
@@ -45,7 +45,7 @@ type TestStruct struct {
 
 func TestInstantiate(t *testing.T) {
 	var Bool			*bool
-	var ts 				TestStruct
+	var ts 				AllTypes
 
 	if err := Instantiate(&ts); err != nil { t.Error(err) }
 	if err := Instantiate(&Bool); err != nil { t.Error(err) }
@@ -141,8 +141,8 @@ func (h *RefactorObject) Refactor() interface{} {
 func TestRefactor(t *testing.T) {
 
 	t.Run("Types", func(t *testing.T) {
-		ts := &TestStruct{
-			Slice: []*TestStruct{&TestStruct{Int8: 8}, &TestStruct{Bool: false}},
+		ts := &AllTypes{
+			Slice: []*AllTypes{&AllTypes{Int8: 8}, &AllTypes{Bool: false}},
 			Map: map[string]int{"Key1": 1, "Key2": 2},
 		}
 		if _,  err := Refactor(ts); err != nil { t.Fatal(err) }
@@ -203,5 +203,12 @@ func TestRefactor(t *testing.T) {
 		bs, err := json.Marshal(newts)
 		if err != nil { t.Fatal(err) }
 		if !strings.Contains(string(bs), "Int64_1") {t.Fatalf("tag \"name\" doesn't work")}
+	})
+
+	t.Run("MarshallJson", func(t *testing.T) {
+		st := &AllTypes{}
+		bs, err := RefactorJson(st)
+		if err != nil { t.Fatal(err) }
+		if strings.Contains(string(bs), "Complex64") {t.Fatalf("refactorJson doesn't work")}
 	})
 }
