@@ -9,7 +9,7 @@ import (
 
 
 func RefactorJson(obj interface{}, opt... RefactorOption) ([]byte, error){
-	opt = append(opt, RefactorMarshallKinds())
+	opt = append(opt, RefactorTitle(true), RefactorMarshallKinds())
 	st, err := Refactor(obj, opt...)
 	if err != nil { return nil, err}
 	data, err := json.Marshal(st)
@@ -18,7 +18,7 @@ func RefactorJson(obj interface{}, opt... RefactorOption) ([]byte, error){
 }
 
 func RefactorYaml(obj interface{}, opt... RefactorOption) ([]byte, error){
-	opt = append(opt, RefactorMarshallKinds())
+	opt = append(opt, RefactorTitle(true), RefactorMarshallKinds())
 	st, err := Refactor(obj, opt...)
 	if err != nil { return nil, err}
 	data, err := yaml.Marshal(st)
@@ -32,10 +32,7 @@ func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err erro
 	if o.Kind() != Ptr { return nil, fmt.Errorf("refactoring object must be a pointer")}
 
 	// init config
-	cfg := &RefactorConfig{
-		Title: false,
-		WithTag: true,
-	}
+	cfg := &RefactorConfig{}
 	for _, o := range opt { o.apply(cfg) }
 
 	// refactor
@@ -163,7 +160,7 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 
 		// field tag
 		tag := StructTag("")
-		if cfg.WithTag { tag = f.Tag }
+		if !cfg.WithoutTag { tag = f.Tag }
 
 		// parse tag
 		if t, ok := f.Tag.Lookup("refactor"); ok {
@@ -175,7 +172,7 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 		// pkgpath
 		pkgpath := f.PkgPath
 		c := int(fieldName[0])
-		if 65 <= c && c <= 80 { pkgpath = "" }
+		if 65 <= c && c <= 90 { pkgpath = "" }
 
 		// add field
 		v := o.Field(i)
@@ -201,7 +198,10 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 
 func validKind(o Value, cfg *RefactorConfig) bool {
 	if !cfg.ContainKind(o.Kind()) { return false}
-	if o.Kind() == Ptr { return validKind(o.Elem(), cfg) }
+	if o.Kind() == Ptr {
+		if o.IsNil() { if cfg.SkipNil { return false } else { return true} }
+		return validKind(o.Elem(), cfg)
+	}
 	return true
 }
 
@@ -210,9 +210,10 @@ func validKind(o Value, cfg *RefactorConfig) bool {
 
 type RefactorConfig struct {
 	Title					bool						`json:"title" yaml:"title"`
-	WithTag					bool						`json:"with_tag" yaml:"with_tag"`
+	WithoutTag				bool						`json:"without_tag" yaml:"without_tag"`
 	Kinds					[]Kind						`json:"kinds" yaml:"kinds"`
 	kindDict				map[Kind]bool
+	SkipNil					bool						`json:"skip_nil" yaml:"skip_nil"`
 }
 
 func (h *RefactorConfig) ContainKind(k Kind) bool {
@@ -238,9 +239,9 @@ func RefactorTitle(title bool) RefactorOption{
 	}}
 }
 
-func RefactorWithTag(withtag bool) RefactorOption{
+func RefactorWithoutTag() RefactorOption{
 	return RefactorOption{func(c *RefactorConfig){
-		c.WithTag = withtag
+		c.WithoutTag = true
 	}}
 }
 
@@ -262,5 +263,11 @@ func RefactorMarshallKinds() RefactorOption {
 			String, Interface,  Struct,
 			Ptr,
 		)
+	}}
+}
+
+func RefactorSkipNil() RefactorOption {
+	return RefactorOption{func(c *RefactorConfig){
+		c.SkipNil = true
 	}}
 }
