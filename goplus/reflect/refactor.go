@@ -81,11 +81,18 @@ func refactorSlice(o Value, cfg *RefactorConfig) Value {
 	for _, v := range s {
 		if tp == nil { tp = v.Type(); continue }
 		if v.Type() == tp { continue }
-		var t interface{}
-		tp = TypeOf(t)
+		tp = nil
 		break
 	}
-	ret := MakeSlice(SliceOf(tp), 0, o.Cap())
+
+	var ret Value
+	if tp == nil {
+		var a []interface{}
+		ret = MakeSlice(TypeOf(a), 0, o.Cap())
+	} else {
+		ret = MakeSlice(SliceOf(tp), 0, o.Cap())
+	}
+
 	ret = Append(ret, s...)
 	return ret
 }
