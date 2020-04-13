@@ -70,12 +70,13 @@ func refactorPtr(o Value, cfg *RefactorConfig) Value {
 }
 
 func refactorSlice(o Value, cfg *RefactorConfig) Value {
-	if o.Len() == 0 { return MakeSlice(o.Type(), 0, o.Cap()) }
 	s := make([]Value, 0, o.Len())
 	for i:=0; i<o.Len(); i++{
 		v := o.Index(i)
 		if nv := refactor(v, cfg); !nv.IsValid() { continue } else { s = append(s, nv) }
 	}
+	if len(s) == 0 { return MakeSlice(o.Type(), 0, o.Cap()) }
+	
 	var tp Type
 	for _, v := range s {
 		if tp == nil { tp = v.Type(); continue }
