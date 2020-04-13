@@ -18,7 +18,7 @@ func CallValue(v Value, in []Value) (out []Value, reterr error) {
 }
 
 // can get unexported value
-func Readable(v Value) Value {
+func Access(v Value) Value {
 	if !v.IsValid() || v.CanInterface() { return v}
 	if v.CanAddr() { return NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem() }
 	switch v.Kind() {
@@ -35,7 +35,7 @@ func Readable(v Value) Value {
 // can set unexported value
 func SetValue(dst Value, src Value) error {
 	if !dst.IsValid() { return fmt.Errorf("invalid destination value") }
-	src = Readable(src)
+	src = Access(src)
 	if !src.IsValid() { return fmt.Errorf("source value %v can not readable", src) }
 	if !dst.CanSet() {
 		if !dst.CanAddr() { return fmt.Errorf("unddressed destionation value %v", dst)}

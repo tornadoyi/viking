@@ -120,7 +120,7 @@ func TestGetAndSetPrivateValue(t *testing.T){
 	if v.CanSet() { t.Fatal("why private member can be set ?") }
 	newPrivate := ValueOf(int(1))
 	SetValue(v, newPrivate)
-	if Readable(v).Interface().(int) != 1 { t.Fail() }
+	if Access(v).Interface().(int) != 1 { t.Fail() }
 }
 
 

@@ -41,11 +41,7 @@ func Refactor(obj interface{}, opt... RefactorOption) (ret interface{}, err erro
 
 func refactor(o Value, cfg *RefactorConfig) Value {
 	// refactor function
-	f := o.MethodByName("Refactor")
-	if f.IsValid() && !f.IsZero() && f.CanInterface(){
-		outs := f.Call(nil)
-		if len(outs) == 1 { return outs[0]}
-	}
+	if v := callMethod(o, "Refactor"); v.IsValid() { return v}
 
 	// check valid kind
 	if !validKind(o, cfg) { return InvalidValue}
@@ -55,7 +51,7 @@ func refactor(o Value, cfg *RefactorConfig) Value {
 	case Slice, Array: return refactorSlice(o, cfg)
 	case Chan: return refactorChan(o, cfg)
 	case Struct: return refactorStruct(o, cfg)
-	case Interface: return refactor(o.Elem(), cfg)
+	case Interface: return refactorInterface(o, cfg)
 	case Ptr: return refactorPtr(o, cfg)
 	}
 	// default
@@ -67,6 +63,11 @@ func refactor(o Value, cfg *RefactorConfig) Value {
 func refactorPtr(o Value, cfg *RefactorConfig) Value {
 	if o.IsNil() { return New(o.Type()).Elem() }
 	if v := refactor(o.Elem(), cfg); !v.IsValid() { return v} else { return v.Addr()}
+}
+
+func refactorInterface(o Value, cfg *RefactorConfig) Value {
+	if o.IsNil() { return New(o.Type()).Elem() }
+	return refactor(o.Elem(), cfg)
 }
 
 func refactorSlice(o Value, cfg *RefactorConfig) Value {
@@ -146,16 +147,17 @@ func refactorChan(o Value, cfg *RefactorConfig) Value {
 }
 
 func refactorStruct(o Value, cfg *RefactorConfig) Value {
-	// format: 1. ignore/name
-	parseTag := func(stag string) (bool, string) {
-		ignore, name := false, ""
+	// format: 1. ignore/name 	2. func
+	parseTag := func(stag string) (bool, string, string) {
+		ignore, name, fname := false, "", ""
 		for i, t := range strings.Split(stag, ",") {
 			if len(t) == 0 { continue }
 			switch i {
 			case 0: if t == "-" { ignore = true } else { name = t }
+			case 1: fname = t
 			}
 		}
-		return ignore, name
+		return ignore, name, fname
 	}
 
 	fields := make([]StructField, 0, o.NumField())
@@ -173,10 +175,12 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 		if !cfg.WithoutTag { tag = f.Tag }
 
 		// parse tag
+		method := ""
 		if t, ok := f.Tag.Lookup("refactor"); ok {
-			ignore, name := parseTag(t)
+			ignore, name, fname := parseTag(t)
 			if ignore { continue }
 			if len(name) != 0 { fieldName = name }
+			method = fname
 		}
 
 		// pkgpath
@@ -184,10 +188,14 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 		c := int(fieldName[0])
 		if 65 <= c && c <= 90 { pkgpath = "" }
 
-		// add field
+		// new value
 		v := o.Field(i)
-		nv := refactor(v, cfg)
+		var nv Value
+		if len(method) > 0 { nv = callMethod(Access(v), method) }
+		if !nv.IsValid() { nv = refactor(v, cfg) }
 		if !nv.IsValid() { continue }
+
+		// add field
 		nvs = append(nvs, nv)
 		fields = append(fields, StructField{
 			fieldName,
@@ -205,6 +213,18 @@ func refactorStruct(o Value, cfg *RefactorConfig) Value {
 	}
 	return ret
 }
+
+
+func callMethod(o Value, name string) Value {
+	if !o.IsValid() { return InvalidValue}
+	f := o.MethodByName(name)
+	if !f.IsValid() || f.IsZero() || !f.CanInterface() { return InvalidValue}
+
+	outs := f.Call(nil)
+	if len(outs) != 1 { return InvalidValue}
+	return outs[0]
+}
+
 
 func validKind(o Value, cfg *RefactorConfig) bool {
 	if !cfg.ContainKind(o.Kind()) { return false}
