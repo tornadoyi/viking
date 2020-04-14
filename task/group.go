@@ -12,6 +12,9 @@ type TaskGroup struct {
 
 func NewGroup() *TaskGroup{ return &TaskGroup{make([]*Task, 0), &sync.WaitGroup{}} }
 
+func (h *TaskGroup) At(idx int) *Task { return h.tasks[idx] }
+
+func (h *TaskGroup) Len() int { return len(h.tasks) }
 
 func (h *TaskGroup) Terminated() bool{
 	for _, t := range h.tasks{
