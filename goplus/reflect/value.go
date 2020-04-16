@@ -24,10 +24,20 @@ func Access(v Value) Value {
 	switch v.Kind() {
 	case Bool: return ValueOf(v.Bool())
 	case String: return ValueOf(v.String())
-	case Int, Int8, Int16, Int32, Int64: return ValueOf(v.Int())
-	case Uint, Uintptr, Uint8, Uint16, Uint32, Uint64: return ValueOf(v.Uint())
-	case Float32, Float64: return ValueOf(v.Float())
-	case Complex64, Complex128: return ValueOf(v.Complex())
+	case Int:	return ValueOf(int(v.Int()))
+	case Int8:  return ValueOf(int8(v.Int()))
+	case Int16: return ValueOf(int16(v.Int()))
+	case Int32: return ValueOf(int32(v.Int()))
+	case Int64: return ValueOf(int64(v.Int()))
+	case Uint:  return ValueOf(uint(v.Uint()))
+	case Uint8:  return ValueOf(uint8(v.Uint()))
+	case Uint16: return ValueOf(uint16(v.Uint()))
+	case Uint32: return ValueOf(uint32(v.Uint()))
+	case Uint64: return ValueOf(uint64(v.Uint()))
+	case Float32: return ValueOf(float32(v.Float()))
+	case Float64: return ValueOf(float64(v.Float()))
+	case Complex64: return ValueOf(complex64(v.Complex()))
+	case Complex128: return ValueOf(v.Complex())
 	default: return InvalidValue
 	}
 }
