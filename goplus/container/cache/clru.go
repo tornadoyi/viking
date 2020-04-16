@@ -1,6 +1,9 @@
 package cache
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // Cache is a thread-safe fixed size LRU cache.
 type CLRU struct {
@@ -55,6 +58,19 @@ func (c *CLRU) Get(key interface{}) (value interface{}, ok bool) {
 	return value, ok
 }
 
+// Get looks up a key's value from the cache.
+func (c *CLRU) Gets(keys []interface{}) ([]interface{}, []bool) {
+	c.lock.Lock()
+	values, oks := make([]interface{}, len(keys)), make([]bool, len(keys))
+	for i, key := range keys {
+		value, ok := c.lru.Get(key)
+		values[i], oks[i] = value, ok
+	}
+	c.lock.Unlock()
+	return values, oks
+}
+
+
 // Peek returns the key value (or undefined if not found) without updating
 // the "recently used"-ness of the key.
 func (c *CLRU) Peek(key interface{}) (value interface{}, ok bool) {
@@ -63,6 +79,21 @@ func (c *CLRU) Peek(key interface{}) (value interface{}, ok bool) {
 	c.lock.RUnlock()
 	return value, ok
 }
+
+
+// Peek returns the key value (or undefined if not found) without updating
+// the "recently used"-ness of the key.
+func (c *CLRU) Peeks(keys []interface{}) ([]interface{}, []bool) {
+	c.lock.Lock()
+	values, oks := make([]interface{}, len(keys)), make([]bool, len(keys))
+	for i, key := range keys {
+		value, ok := c.lru.Peek(key)
+		values[i], oks[i] = value, ok
+	}
+	c.lock.Unlock()
+	return values, oks
+}
+
 
 // PeekLatest returns the latest entry
 func (c *CLRU) PeekLatest() (key interface{}, value interface{}, ok bool) {
@@ -113,6 +144,21 @@ func (c *CLRU) Add(key, value interface{}) (evicted bool) {
 }
 
 
+// Add adds a value to the cache. Returns true if an eviction occurred.
+func (c *CLRU) Adds(keys []interface{}, values[]interface{}) ([]bool, error) {
+	if len(keys) != len(values) { return nil, fmt.Errorf("mismatch length keys: %v values: %v", len(keys), len(values))}
+	c.lock.Lock()
+	evicteds := make([]bool, len(keys))
+	for i:=0; i<len(keys); i++ {
+		key, value := keys[i], values[i]
+		evicted := c.lru.Add(key, value)
+		evicteds[i] = evicted
+	}
+	c.lock.Unlock()
+	return evicteds, nil
+}
+
+
 // Remove removes the provided key from the cache.
 func (c *CLRU) Remove(key interface{}) (present bool) {
 	c.lock.Lock()
@@ -120,6 +166,20 @@ func (c *CLRU) Remove(key interface{}) (present bool) {
 	c.lock.Unlock()
 	return
 }
+
+
+// Remove removes the provided key from the cache.
+func (c *CLRU) Removes(keys []interface{}) ([]bool) {
+	c.lock.Lock()
+	presents := make([]bool, len(keys))
+	for i, key := range keys {
+		present := c.lru.Remove(key)
+		presents[i] = present
+	}
+	c.lock.Unlock()
+	return presents
+}
+
 
 // Resize changes the cache size.
 func (c *CLRU) Resize(size int) (evicted int) {
