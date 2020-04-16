@@ -84,7 +84,7 @@ func (c *CLRU) Peek(key interface{}) (value interface{}, ok bool) {
 // Peek returns the key value (or undefined if not found) without updating
 // the "recently used"-ness of the key.
 func (c *CLRU) Peeks(keys []interface{}) ([]interface{}, []bool) {
-	c.lock.Lock()
+	c.lock.RLock()
 	values, oks := make([]interface{}, len(keys)), make([]bool, len(keys))
 	for i, key := range keys {
 		value, ok := c.lru.Peek(key)
