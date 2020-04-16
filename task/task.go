@@ -140,17 +140,18 @@ func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 }
 
 func (h *Task) terminate(cancel bool, result interface{}, err error) {
+	// lock first
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
 	// check state
-	s := h.State()
-	if s == Canceled || s == Finished { return }
+	if h.state == Canceled || h.state == Finished { return }
 
 	// terminate
-	h.mutex.Lock()
-	if s == Running { h.wg.Done() }
+	if h.state == Running { h.wg.Done() }
 	if cancel { h.state = Canceled } else { h.state = Finished }
 	h.error = err
 	h.result = result
-	h.mutex.Unlock()
 
 	// callback
 	if h.terminateCallback != nil {
