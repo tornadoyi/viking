@@ -98,6 +98,10 @@ func refactorSlice(o Value, cfg *RefactorConfig) Value {
 	return ret
 }
 
+var (
+	interfaceKeyType			= ValueOf(map[interface{}]interface{}{}).Type().Key()
+	interfaceValueType			= ValueOf(map[interface{}]interface{}{}).Type().Elem()
+)
 func refactorMap(o Value, cfg *RefactorConfig) Value {
 	kvs := make(map[Value]Value, o.Len())
 	it := o.MapRange()
@@ -120,8 +124,7 @@ func refactorMap(o Value, cfg *RefactorConfig) Value {
 		if ktype == k.Type() {
 			continue
 		}
-		var t interface{}
-		ktype = TypeOf(t)
+		ktype = interfaceKeyType
 		break
 	}
 	for _, v := range kvs {
@@ -132,8 +135,7 @@ func refactorMap(o Value, cfg *RefactorConfig) Value {
 		if vtype == v.Type() {
 			continue
 		}
-		var t interface{}
-		vtype = TypeOf(t)
+		vtype = interfaceValueType
 		break
 	}
 
