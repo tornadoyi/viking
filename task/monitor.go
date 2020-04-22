@@ -24,11 +24,14 @@ func init() {
 
 	check := func() {
 		now := time.Now().UnixNano()
-		for e := tasks.Front(); e != tasks.Back(); e = e.Next() {
+
+		e := tasks.Front()
+		for ; e != tasks.Back(); {
+			n := e.Next()
 			t := e.Value.(*Task)
 			if t.Terminated() || t.skipMonitor { tasks.Remove(e) }
-			if now - t.createTime.UnixNano() < zombieDuration { continue }
-			if zombieCallback != nil { zombieCallback(t) }
+			if zombieCallback != nil && now - t.createTime.UnixNano() >= zombieDuration { zombieCallback(t) }
+			e = n
 		}
 	}
 
