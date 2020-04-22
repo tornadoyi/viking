@@ -26,7 +26,7 @@ func init() {
 		now := time.Now().UnixNano()
 
 		e := tasks.Front()
-		for ; e != tasks.Back(); {
+		for ; e != nil; {
 			n := e.Next()
 			t := e.Value.(*Task)
 			if t.Terminated() || t.skipMonitor {
