@@ -26,6 +26,11 @@ type Task struct {
 	wg					*sync.WaitGroup
 	terminateCallback	*runtime.JITFunc
 	mutex				sync.RWMutex
+
+	// monitor
+	createTime			time.Time
+	startTime			time.Time
+	terminateTime		time.Time
 }
 
 func NewTask(f interface{}, args... interface{}) *Task {
@@ -53,6 +58,13 @@ func (h *Task) Result() interface{} {
 	return result
 }
 
+func (h *Task) Running() bool {
+	h.mutex.RLock()
+	ret := h.state == Running
+	h.mutex.RUnlock()
+	return ret
+}
+
 func (h *Task) Finished() bool {
 	h.mutex.RLock()
 	ret := h.state == Finished
@@ -76,6 +88,33 @@ func (h *Task) Terminated() bool {
 
 func (h *Task) Arguments() []interface{} { return h.function.Contexts() }
 
+func (h *Task) StackInfo() runtime.StackInfo {
+	h.mutex.RLock()
+	ret := h.stack
+	h.mutex.RUnlock()
+	return  ret
+}
+
+func (h *Task) CreateTime() time.Time {
+	h.mutex.RLock()
+	ret := h.createTime
+	h.mutex.RUnlock()
+	return  ret
+}
+func (h *Task) StartTime() time.Time {
+	h.mutex.RLock()
+	ret := h.startTime
+	h.mutex.RUnlock()
+	return  ret
+}
+func (h *Task) TerminateTime() time.Time {
+	h.mutex.RLock()
+	ret := h.terminateTime
+	h.mutex.RUnlock()
+	return  ret
+}
+
+
 func (h *Task) SetTerminateCallback (f func(*Task)) {
 	h.mutex.Lock()
 	h.terminateCallback = runtime.NewJITFunc(f)
@@ -90,6 +129,7 @@ func (h *Task) Start(){
 	} else {
 		h.state = Running
 		h.wg.Add(1)
+		h.startTime = time.Now()
 	}
 	h.mutex.Unlock()
 	if stateErr != nil { panic(stateErr) }
@@ -130,7 +170,7 @@ func (h *Task) WaitTimeout(timeout time.Duration) {
 
 
 func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
-	return &Task{
+	t := &Task{
 		function: 	runtime.NewJITFunc(f, args...),
 		state:    	Init,
 		result:   	nil,
@@ -138,7 +178,10 @@ func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 		stack:    	runtime.Trace(2),
 		wg:       	wg,
 		mutex:    	sync.RWMutex{},
+		createTime: time.Now(),
 	}
+	onTaskCreate(t)
+	return t
 }
 
 func (h *Task) terminate(cancel bool, result interface{}, err error) {
@@ -154,6 +197,9 @@ func (h *Task) terminate(cancel bool, result interface{}, err error) {
 	if cancel { h.state = Canceled } else { h.state = Finished }
 	h.error = err
 	h.result = result
+
+	// monitor
+	h.terminateTime = time.Now()
 
 	// callback
 	if h.terminateCallback != nil {
