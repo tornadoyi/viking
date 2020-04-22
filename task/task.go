@@ -19,6 +19,7 @@ const (
 
 type Task struct {
 	function			*runtime.JITFunc
+	arguments			[]interface{}
 	state				State
 	result				interface{}
 	error				error
@@ -73,6 +74,8 @@ func (h *Task) Terminated() bool {
 	h.mutex.RUnlock()
 	return ret
 }
+
+func (h *Task) Arguments() []interface{} { return h.arguments}
 
 func (h *Task) SetTerminateCallback (f func(*Task)) {
 	h.mutex.Lock()
@@ -129,13 +132,14 @@ func (h *Task) WaitTimeout(timeout time.Duration) {
 
 func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 	return &Task{
-		function: runtime.NewJITFunc(f, args...),
-		state:    Init,
-		result:   nil,
-		error:    nil,
-		stack:    runtime.Trace(2),
-		wg:       wg,
-		mutex:    sync.RWMutex{},
+		function: 	runtime.NewJITFunc(f, args...),
+		arguments: 	args,
+		state:    	Init,
+		result:   	nil,
+		error:    	nil,
+		stack:    	runtime.Trace(2),
+		wg:       	wg,
+		mutex:    	sync.RWMutex{},
 	}
 }
 
