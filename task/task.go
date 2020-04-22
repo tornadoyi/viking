@@ -19,7 +19,6 @@ const (
 
 type Task struct {
 	function			*runtime.JITFunc
-	arguments			[]interface{}
 	state				State
 	result				interface{}
 	error				error
@@ -75,7 +74,7 @@ func (h *Task) Terminated() bool {
 	return ret
 }
 
-func (h *Task) Arguments() []interface{} { return h.arguments}
+func (h *Task) Arguments() []interface{} { return h.function.Contexts() }
 
 func (h *Task) SetTerminateCallback (f func(*Task)) {
 	h.mutex.Lock()
@@ -133,7 +132,6 @@ func (h *Task) WaitTimeout(timeout time.Duration) {
 func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 	return &Task{
 		function: 	runtime.NewJITFunc(f, args...),
-		arguments: 	args,
 		state:    	Init,
 		result:   	nil,
 		error:    	nil,

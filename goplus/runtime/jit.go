@@ -60,6 +60,8 @@ func NewJITFunc(function interface{}, contexts... interface{}) *JITFunc {
 
 func (h *JITFunc) Name() string { return h.name }
 
+func (h *JITFunc) Contexts() []interface{} { return h.contexts }
+
 func (h *JITFunc) SetName(name string) { h.name = name }
 
 func (h *JITFunc) Compile() error {
