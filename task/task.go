@@ -213,7 +213,7 @@ func (h *Task) terminate(cancel bool, result interface{}, err error) {
 
 	// monitor
 	h.terminateTime = time.Now()
-	
+
 	// unlock
 	cb := h.terminateCallback
 	h.mutex.Unlock()
