@@ -29,7 +29,7 @@ func Trace(skip int) StackInfo{
 func (h StackInfo) Frames() []runtime.Frame{
 	frames := runtime.CallersFrames(h)
 	frameList := make([]runtime.Frame, 0, len(h))
-	for ; ; {
+	for {
 		f, ok := frames.Next()
 		if !ok { break }
 		frameList = append(frameList, f)

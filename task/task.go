@@ -28,6 +28,7 @@ type Task struct {
 	mutex				sync.RWMutex
 
 	// monitor
+	skipMonitor			bool
 	createTime			time.Time
 	startTime			time.Time
 	terminateTime		time.Time
@@ -114,10 +115,23 @@ func (h *Task) TerminateTime() time.Time {
 	return  ret
 }
 
+func (h *Task) SkipMonitor() bool {
+	h.mutex.RLock()
+	ret := h.skipMonitor
+	h.mutex.RUnlock()
+	return  ret
+}
+
 
 func (h *Task) SetTerminateCallback (f func(*Task)) {
 	h.mutex.Lock()
 	h.terminateCallback = runtime.NewJITFunc(f)
+	h.mutex.Unlock()
+}
+
+func (h *Task) SetSkipMonitor(skip bool) {
+	h.mutex.Lock()
+	h.skipMonitor = skip
 	h.mutex.Unlock()
 }
 

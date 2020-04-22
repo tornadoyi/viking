@@ -26,14 +26,14 @@ func init() {
 		now := time.Now().UnixNano()
 		for e := tasks.Front(); e != tasks.Back(); e = e.Next() {
 			t := e.Value.(*Task)
-			if t.Terminated() { tasks.Remove(e) }
+			if t.Terminated() || t.skipMonitor { tasks.Remove(e) }
 			if now - t.createTime.UnixNano() < zombieDuration { continue }
 			if zombieCallback != nil { zombieCallback(t) }
 		}
 	}
 
 	go func() {
-		for ; ; {
+		for {
 			c := <- commands
 			switch c.(type) {
 			case *addTaskCmd:  tasks.PushBack(c.(*addTaskCmd).task)
