@@ -29,7 +29,9 @@ func init() {
 		for ; e != tasks.Back(); {
 			n := e.Next()
 			t := e.Value.(*Task)
-			if t.Terminated() || t.skipMonitor { tasks.Remove(e) }
+			if t.Terminated() || t.skipMonitor {
+				tasks.Remove(e)
+			}
 			if zombieCallback != nil && now - t.createTime.UnixNano() >= zombieDuration { zombieCallback(t) }
 			e = n
 		}
@@ -51,6 +53,9 @@ func init() {
 		t.Reset(checkDelay)
 	})
 }
+
+
+func NumTask() int { return tasks.Len() }
 
 
 func SetMonitorOnOff(onOff bool) { monitorOnOff = onOff }
