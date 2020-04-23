@@ -25,7 +25,7 @@ type Task struct {
 	stack				runtime.StackInfo
 	wg					*sync.WaitGroup
 	terminateCallback	*runtime.JITFunc
-	mutex				sync.RWMutex
+	mutex				*sync.RWMutex
 
 	// monitor
 	skipMonitor			bool
@@ -191,7 +191,7 @@ func newTask(wg *sync.WaitGroup, f interface{}, args... interface{}) *Task {
 		error:    	nil,
 		stack:    	runtime.Trace(2),
 		wg:       	wg,
-		mutex:    	sync.RWMutex{},
+		mutex:    	&sync.RWMutex{},
 		createTime: time.Now(),
 	}
 	onTaskCreate(t)
