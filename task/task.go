@@ -202,20 +202,19 @@ func (h *Task) terminate(cancel bool, result interface{}, err error) {
 	// lock first
 	h.mutex.Lock()
 
-	// check state
-	if h.state == Canceled || h.state == Finished { return }
+	// only unterminated task can termination
+	var cb *runtime.JITFunc
+	if h.state != Canceled && h.state != Finished {
+		if h.state == Running { h.wg.Done() }
+		if cancel { h.state = Canceled } else { h.state = Finished }
+		h.error = err
+		h.result = result
 
-	// terminate
-	if h.state == Running { h.wg.Done() }
-	if cancel { h.state = Canceled } else { h.state = Finished }
-	h.error = err
-	h.result = result
-
-	// monitor
-	h.terminateTime = time.Now()
+		h.terminateTime = time.Now()
+		cb = h.terminateCallback
+	}
 
 	// unlock
-	cb := h.terminateCallback
 	h.mutex.Unlock()
 
 	// callback
