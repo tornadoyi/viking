@@ -89,6 +89,7 @@ func listenHealthCheck(regCheckUrl string, handler func (ctx *http.RequestCtx)) 
 			log.Errorw("Consul health service end with error", "error", err)
 		}
 	})
+	t.SetSkipMonitor(true)
 	t.Start()
 
 	return nil
