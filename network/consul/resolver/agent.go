@@ -119,7 +119,7 @@ func NewAgentServiceNameFilter(services []string) *AgentServiceNameFilter {
 	return f
 }
 
-func (h *AgentServiceNameFilter) Filter(target _resolver.Target, s *AgentService) bool { if _, ok := h.services[s.Service]; ok { return true } else { return false } }
+func (h *AgentServiceNameFilter) Filter(target _resolver.Target, s *AgentService) bool { if _, ok := h.services[s.Service]; ok { return false } else { return true } }
 
 
 type IAgent interface {
