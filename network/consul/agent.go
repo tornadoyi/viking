@@ -52,21 +52,27 @@ func (h *Agent) RegisterService(cfg *config.AgentServiceRegistration) error {
 
 }
 
+func (h *Agent) FetchServices() error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	services, err := h.Agent.Services()
+	if err != nil { return err }
+	h.services = services
+	return nil
+}
+
 func (h *Agent) SetInterval(interval time.Duration) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	if h.timer != nil { h.timer.Stop() }
 	h.timer = time.AfterFunc(interval, func() {
-		h.mutex.Lock()
-		defer h.mutex.Unlock()
 		defer h.timer.Reset(interval)
-		services, err := h.Agent.Services()
+		err := h.FetchServices()
 		if err != nil {
 			log.Errorw("Get consul agent services failed", "error", err)
 			return
 		}
-		h.services = services
 	})
 }
 
