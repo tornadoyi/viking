@@ -99,7 +99,6 @@ func (h *AgentResolver) updateState() (reterr error) {
 		}
 	}
 	h.connection.UpdateState(_resolver.State{Addresses: address})
-	log.Infof("consult address: %v", address)
 	return nil
 }
 
